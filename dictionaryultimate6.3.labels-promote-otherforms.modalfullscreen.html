@@ -1,0 +1,2023 @@
+
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>📚 My Word Vault</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+
+/* ---------- Stars UI ---------- */
+.star-indicator { display:inline-flex; gap:4px; align-items:center; cursor:pointer; font-size:1.02rem; user-select:none; }
+.star-indicator span { display:inline-block; line-height:1; font-size:1.05rem; padding:0 1px; }
+.star-indicator .filled { color:#ffd166; text-shadow:0 2px 8px rgba(0,0,0,0.18); }
+.star-indicator .empty {
+  color: #9ca3af; /* Tailwind gray-400 */
+  opacity: 0.65;  /* Slightly dim, but still visible */
+  text-shadow: 0 1px 4px rgba(0,0,0,0.15);
+}
+
+
+.star-btn { background:transparent; border:1px dashed rgba(255,255,255,0.08); padding:6px 8px; border-radius:8px; font-weight:800; color:#fff; cursor:pointer; }
+.star-btn.active { background: rgba(255,209,102,0.12); border-color: rgba(255,209,102,0.25); color:#ffd166; }
+
+
+
+    :root { --bg1:#3b82f6; --bg2:#9333ea; }
+    body{
+      min-height:100vh; margin:0;
+      background:
+        radial-gradient(1200px 600px at 10% 10%, rgba(255,255,255,.06), transparent),
+        radial-gradient(1200px 600px at 90% 20%, rgba(255,255,255,.04), transparent),
+        linear-gradient(135deg, var(--bg1), var(--bg2));
+      color:#fff;
+      font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+    }
+
+    .glass{ background:rgba(255,255,255,.10); border:1px solid rgba(255,255,255,.18); backdrop-filter: blur(10px); border-radius:12px; }
+
+    .field{ width:100%; padding:12px 14px; border-radius:10px; background:#fff; color:#0f172a; border:1px solid #d1d5db; transition: box-shadow .18s, border-color .18s; }
+    .field::placeholder{ color:#94a3b8; }
+    .field:focus{ outline:none; border-color:#6366f1; box-shadow:0 8px 24px rgba(99,102,241,.12); }
+
+    .btn { padding:.56rem .9rem; border-radius:10px; font-weight:700; display:inline-flex; gap:.5rem; align-items:center; justify-content:center; cursor:pointer; }
+    .btn-primary { background:linear-gradient(135deg,#6366f1,#4338ca); color:#fff; box-shadow:0 10px 24px rgba(67,56,202,.18); }
+    .btn-green { background:linear-gradient(135deg,#10b981,#059669); color:#fff; }
+    .btn-red { background:linear-gradient(135deg,#ef4444,#b91c1c); color:#fff; }
+    .btn-outline { background:transparent; border:1px solid rgba(255,255,255,.45); color:#fff; }
+
+    .chip{ display:inline-block; padding:.28rem .55rem; border-radius:999px; background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.15); font-weight:600; font-size:.78rem; color:#fff; }
+
+    /* card height is driven by CSS variable so JS can toggle sizes */
+    .flip { perspective:1200px; height:var(--card-height,17.5rem); position:relative; opacity:0; transform:translateY(6px); transition: opacity .28s ease, transform .28s ease; }
+    .flip.visible { opacity:1; transform:none; }
+    .flip-inner { position:relative; width:100%; height:100%; transform-style:preserve-3d; transition: transform .65s cubic-bezier(.2,.8,.2,1); }
+    .flip.flipped .flip-inner { transform: rotateY(180deg); }
+    .flip-face { position:absolute; inset:0; backface-visibility:hidden; border-radius:14px; overflow:hidden; display:flex; flex-direction:column; justify-content:space-between; }
+    .card-front { background: linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.03)); padding:18px; }
+    .card-back  { background: rgba(0,0,0,.42); padding:18px; transform: rotateY(180deg); }
+
+    /* prettier, modern heading */
+    .word-title { font-weight:900; font-size:1.35rem; color:transparent; -webkit-background-clip:text; background-clip:text; background-image: linear-gradient(90deg, rgba(255,255,255,1), rgba(255,255,255,0.92)); letter-spacing:.3px; text-shadow:0 8px 24px rgba(2,6,23,0.24); display:inline-block; transition: transform .18s ease; }
+    .word-title::after{ content:''; display:block; height:3px; width:54px; margin-top:8px; border-radius:4px; background: linear-gradient(90deg,#60a5fa,#a78bfa); opacity:.95; }
+    .flip:hover .word-title{ transform: translateY(-3px) scale(1.01); }
+
+    .summary { color: rgba(255,255,255,.92); font-size:.92rem; margin-top:8px; max-height:3.7rem; overflow:hidden; font-style:italic; opacity:.96; }
+
+    .card-dot { width:14px; height:14px; border-radius:50%; background:#fff; position:absolute; top:12px; right:12px; box-shadow:0 4px 12px rgba(0,0,0,.25); cursor:pointer; border:2px solid rgba(0,0,0,.08); }
+    .card-dot:hover { transform:scale(1.06); }
+
+    .def-item { display:flex; gap:10px; align-items:flex-start; background:#fff; color:#0f172a; border-radius:10px; padding:10px; box-shadow:0 8px 20px rgba(2,6,23,.08); margin-bottom:10px; }
+    .def-num { min-width:36px; height:36px; border-radius:999px; background:#0f172a; color:#fff; display:inline-flex; align-items:center; justify-content:center; font-weight:800; }
+    .def-text { flex:1; font-size:0.95rem; line-height:1.4; color:#0b1220; }
+
+    .pos-badge { display:inline-block; padding:.18rem .5rem; border-radius:.6rem; font-weight:800; font-size:.75rem; margin-right:.5rem; vertical-align:middle; cursor:pointer; }
+    .pos-noun{ background:#f3e8ff; color:#6b21a8; }
+    .pos-verb{ background:#e0f2fe; color:#075985; }
+    .pos-adjective{ background:#fff1f2; color:#9f1239; }
+    .pos-adverb{ background:#dcfce7; color:#166534; }
+
+    .pill { display:inline-block; padding:.28rem .55rem; border-radius:.75rem; font-size:.85rem; font-weight:700; margin:.12rem; }
+    .pill-syn { background:#dcfce7; color:#166534; }
+    .pill-ant { background:#fee2e2; color:#991b1b; }
+    .pill-tag { background:#e9d5ff; color:#6b21a8; }
+    
+    .pill-label { background:#bfdbfe; color:#1e3a8a; }
+    .label-badge { display:inline-block; padding:.18rem .45rem; border-radius:.55rem; font-size:.72rem; font-weight:800; margin-right:.35rem; background:#eef2ff; color:#3730a3; border:1px solid rgba(0,0,0,.06); }
+    .def-labels { display:inline; margin-left:6px; }
+
+
+    .token-pill { outline:none; display:inline-block; margin:.12rem; padding:.28rem .5rem; border-radius:.6rem; font-weight:700; }
+    .token-pill.clickable { cursor:pointer; box-shadow: 0 8px 20px rgba(0,0,0,.12); }
+    .token-pill.disabled { opacity:0.6; cursor:not-allowed; filter:grayscale(.25); }
+
+    /* INLINE cross-ref styling: keep existing pill behavior *outside* definitions unchanged.
+       Hooks only apply to token-pill elements that are inside .def-text so we don't alter other pills */
+    .def-text .token-pill { display:inline; padding:0; margin:0 .12rem; border-radius:0; font-weight:700; }
+    .def-text .token-pill.xref { text-decoration: underline dotted; text-underline-offset:2px; cursor:pointer; }
+
+    .modal-overlay { position:fixed; inset:0; display:flex; align-items:center; justify-content:center; z-index:70; background: rgba(2,6,23,0.55); backdrop-filter: blur(6px); padding:22px; }
+    .modal-card { width:100%; max-width:880px; border-radius:14px; padding:18px; background:linear-gradient(180deg,#ffffff,#f8fafc); color:#0f172a; box-shadow:0 24px 60px rgba(2,6,23,.45); position:relative; }
+    .modal-close { position:absolute; right:12px; top:12px; background:#111827; color:#fff; border-radius:999px; width:36px; height:36px; display:inline-flex; align-items:center; justify-content:center; cursor:pointer; }
+    .modal-actions { margin-top:12px; display:flex; gap:8px; justify-content:flex-end; }
+
+    .suggestions { position: absolute; z-index:80; background:#fff; color:#0f172a; border-radius:8px; box-shadow:0 8px 30px rgba(2,6,23,.18); margin-top:6px; max-height:210px; overflow:auto; min-width:220px; border:1px solid rgba(0,0,0,.06); }
+    .suggestion-item { padding:8px 10px; cursor:pointer; border-bottom:1px solid rgba(0,0,0,.04); }
+    .suggestion-item:hover { background:#f1f5f9; }
+
+    .duplicate-warning { font-size:.88rem; color:#ffd166; margin-top:6px; display:none; }
+    .duplicate-warning a { color:#fff; text-decoration:underline; cursor:pointer; margin-left:6px; }
+
+    .active-filter { display:inline-flex; align-items:center; gap:8px; background:rgba(255,255,255,.12); padding:.4rem .6rem; border-radius:999px; border:1px solid rgba(255,255,255,.18); color:#fff; font-weight:700; }
+    .active-filter button { background:transparent; color:#fff; border:none; cursor:pointer; font-weight:900; padding:0 6px; }
+
+    .hidden { display:none !important; }
+    .toast{ position: fixed; right: 16px; bottom: 16px; z-index: 60; padding:.75rem 1rem; border-radius:.75rem; color:#07101a; background:#e9fff1; border:1px solid #79f2a0; box-shadow: 0 8px 30px rgba(0,0,0,.15); transform: translateY(40px); opacity:0; transition: .3s; }
+    .toast.show { transform: translateY(0); opacity:1; }
+
+    /* small responsive tweaks so JS changes don't fight Tailwind too much */
+    #wordsContainer { display:grid; grid-template-columns: repeat(2,1fr); gap:18px; }
+
+    @media (min-width:640px){ #wordsContainer.compact { grid-template-columns: repeat(3,1fr) !important; } }
+    @media (min-width:1024px){ #wordsContainer.compact { grid-template-columns: repeat(4,1fr) !important; } }
+
+    /* card entrance */
+    @keyframes cardIn { from { opacity: 0; transform: translateY(8px); } to { opacity:1; transform:none; } }
+
+    .word-meta { margin-top:8px; display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+
+    /* printable-specific styles are left alone (see existing buildPrintableHtml) */
+
+/* Hide navigation buttons inside the modal header */
+#__modalOverlayInner #modalBack,
+#__modalOverlayInner #modalForward,
+#__modalOverlayInner #modalPrev,
+#__modalOverlayInner #modalNext {
+  display: none !important;
+}
+
+/* Main other-form pill */
+.pill-form {
+  display: flex;                   /* ⬅ enables side-by-side label */
+  align-items: center;
+  gap: 6px;                        /* space between form & label */
+  width: fit-content;
+  padding: 6px 10px;
+  margin: 4px 0;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  font-style: italic;
+  font-weight: 600;
+
+  background: rgba(255, 255, 255, 0.08);
+  color: #ffeb3b;                 /* bright yellow text */
+  border: 1px dashed rgba(255, 255, 255, 0.2);
+}
+
+/* Verb tense / form badge inside other-form */
+.pill-form .form-label {
+  background: rgba(0, 200, 255, 0.15);
+  color: #80eaff;
+  font-style: normal;
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 6px;
+  border: 1px solid rgba(0, 200, 255, 0.3);
+}
+
+
+
+.word-meta .other-forms {
+  display: flex;
+  flex-direction: column;
+  gap: 2px; /* small spacing between forms */
+}
+
+.pill-form {
+  color: var(--form-text-color, #ffeb3b);
+}
+
+  </style>
+</head>
+<body>
+  <header class="px-6 pt-8 pb-4 text-center">
+    <h1 class="text-4xl md:text-5xl font-extrabold drop-shadow-[0_8px_24px_rgba(0,0,0,.25)]">📚 My Word Vault</h1>
+    <p class="mt-2 text-white/80">Collect • Learn • Revise — with style</p>
+  </header>
+
+  <div class="max-w-5xl mx-auto px-4">
+    <div id="authSection" class="glass p-5 flex flex-col md:flex-row items-end gap-4 mb-6">
+      <div class="flex-1">
+        <label class="block text-white/90 text-sm mb-1">Email</label>
+        <input id="email" type="email" class="field" placeholder="you@example.com" />
+      </div>
+      <div class="flex-1">
+        <label class="block text-white/90 text-sm mb-1">Password</label>
+        <input id="password" type="password" class="field" placeholder="••••••••" />
+      </div>
+      <div class="flex gap-2">
+        <button id="btnLogin" class="btn btn-green">Login</button>
+        <button id="btnSignUp" class="btn btn-primary">Sign Up</button>
+      </div>
+    </div>
+
+    <div id="userBar" class="glass p-4 mb-6 hidden flex items-center justify-between">
+      <div>
+        <div class="text-sm text-white/80">Logged in as</div>
+        <div id="whoami" class="font-semibold"></div>
+      </div>
+      <div class="flex items-center gap-3">
+        <div class="chip"><span id="wordCount">0</span> words</div>
+        <button id="btnLogout" class="btn btn-red">Logout</button>
+      </div>
+    </div>
+  </div>
+
+  <section id="appSection" class="hidden max-w-5xl mx-auto px-4">
+    <div class="glass p-6 rounded-2xl mb-6">
+      <h2 class="text-2xl font-semibold mb-4">➕ Add / Edit Word</h2>
+      <form id="wordForm" class="grid md:grid-cols-2 gap-3">
+        <div>
+          <label class="block text-white/90 text-sm mb-1">Word (phrase allowed)</label>
+          <input id="word" class="field" placeholder="e.g., break the ice" required />
+          <div id="duplicateWarning" class="duplicate-warning">This word already exists. <a id="viewExisting">View</a></div>
+        </div>
+
+        <div style="position:relative;">
+          <label class="block text-white/90 text-sm mb-1">Tags (comma separated)</label>
+          <input id="tags" class="field" placeholder="e.g., idiom, social, GRE" autocomplete="off" />
+          <div id="tagSuggestions" class="suggestions hidden"></div>
+        </div>
+
+        <div>
+          <label class="block text-white/90 text-sm mb-1">Other forms (comma separated)</label>
+          <input id="otherForms" class="field" placeholder="e.g., run, ran, running, runs" />
+        </div>
+
+        </div>
+     <!-- ★ Revision stars control (paste after Other forms field in the wordForm) -->
+<div>
+  <label class="block text-white/90 text-sm mb-1">Revision stars</label>
+  <div class="flex items-center gap-2">
+    <input type="hidden" id="stars" value="0" />
+    <button type="button" class="star-btn" data-value="1" title="1 star">★</button>
+    <button type="button" class="star-btn" data-value="2" title="2 stars">★★</button>
+    <button type="button" class="star-btn" data-value="3" title="3 stars">★★★</button>
+    <button type="button" id="starClearBtn" class="btn btn-outline">Clear</button>
+  </div>
+</div>
+
+        <div class="md:col-span-2">
+          <label class="block text-white/90 text-sm mb-2">Definitions (each can have per-definition synonyms/antonyms)</label>
+          <div id="definitionsContainer" class="space-y-2"></div>
+          <button type="button" id="btnAddDef" class="btn btn-outline mt-2">➕ Add Definition</button>
+        </div>
+
+        <div>
+          <label class="block text-white/90 text-sm mb-1">Synonyms (general)</label>
+          <input id="synonyms" class="field" placeholder="fluke, chance, blessing" />
+        </div>
+        <div>
+          <label class="block text-white/90 text-sm mb-1">Antonyms (general)</label>
+          <input id="antonyms" class="field" placeholder="misfortune, bad luck" />
+        </div>
+
+        <div class="md:col-span-2 flex gap-2 pt-2">
+          <button type="submit" class="btn btn-primary grow">💾 Save</button>
+          <button type="button" id="btnCancelEdit" class="btn btn-outline" style="display:none">Cancel Edit</button>
+        </div>
+      </form>
+    </div>
+
+    <div class="flex flex-col md:flex-row gap-3 items-stretch md:items-center justify-between mb-4">
+      <div class="flex items-center gap-3 grow">
+        <input id="search" class="field" placeholder="🔍 Search in word, definitions, synonyms, antonyms, tags…" /> <button id="btnThesarus" class="btn btn-outline" title="Open Thesarus">Thesarus</button>
+        <div id="activeFilterContainer" class="ml-3"></div>
+      <!-- star filter controls (paste near the search / activeFilterContainer area) -->
+<div id="starFilterControls" class="ml-3 flex items-center gap-2">
+  <button id="starFilterAll" class="btn btn-outline">All</button>
+  <button id="starFilter1" class="btn btn-outline" title="1 star">★</button>
+  <button id="starFilter2" class="btn btn-outline" title="2 stars">★★</button>
+  <button id="starFilter3" class="btn btn-outline" title="3 stars">★★★</button>
+</div>
+
+      </div>
+      <div class="flex gap-2">
+        <button id="btnClear" class="btn btn-outline">Clear</button>
+        <button id="btnRefresh" class="btn btn-outline">Refresh</button>
+        <button id="btnLayout" class="btn btn-outline">Size: Normal</button>
+        <button id="btnPrintable" class="btn btn-primary">Printable View</button>
+      </div>
+    </div>
+
+    <div id="wordsContainer" class="grid sm:grid-cols-2 lg:grid-cols-3 gap-5 pb-12"></div>
+  </section>
+
+  <div id="modalOverlay" class="hidden" aria-hidden="true"></div>
+  <div id="thesaurusOverlay" class="hidden" aria-hidden="true"></div>
+
+  <div id="toast" class="toast hidden">Saved!</div>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js";
+    import {
+      getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword,
+      onAuthStateChanged, signOut
+    } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-auth.js";
+    import {
+      getFirestore, collection, addDoc, query, where, onSnapshot,
+      serverTimestamp, deleteDoc, updateDoc, doc, getDocs
+    } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore.js";
+
+    // Firebase config (replace if needed)
+    const firebaseConfig = {
+      apiKey: "AIzaSyCGiOMRZHI_PdbuzIkQK8Kk4YcFXHBWtpc",
+      authDomain: "mathsquiz-5a3b7.firebaseapp.com",
+      projectId: "mathsquiz-5a3b7",
+      storageBucket: "mathsquiz-5a3b7.appspot.com",
+      messagingSenderId: "127657807004",
+      appId: "1:127657807004:web:ef17beddcbb04c5de0f159",
+      measurementId: "G-Q73EQ54DPG"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    // UI refs
+    const authSection = document.getElementById("authSection");
+    const appSection  = document.getElementById("appSection");
+    const userBar     = document.getElementById("userBar");
+    const whoami      = document.getElementById("whoami");
+    const wordCountEl = document.getElementById("wordCount");
+    const wordsContainer = document.getElementById("wordsContainer");
+    const toast = document.getElementById("toast");
+
+    const emailEl = document.getElementById("email");
+    const passwordEl = document.getElementById("password");
+    const btnLogin = document.getElementById("btnLogin");
+    const btnSignUp = document.getElementById("btnSignUp");
+    const btnLogout = document.getElementById("btnLogout");
+
+    const wordForm = document.getElementById("wordForm");
+    const wordEl = document.getElementById("word");
+    const synonymsEl = document.getElementById("synonyms");
+    const antonymsEl = document.getElementById("antonyms");
+    const tagsEl = document.getElementById("tags");
+    const otherFormsEl = document.getElementById("otherForms");
+    const btnThesarus = document.getElementById('btnThesarus');
+    const thesaurusOverlay = document.getElementById('thesaurusOverlay');
+
+    const btnCancelEdit = document.getElementById("btnCancelEdit");
+
+    const defsContainer = document.getElementById("definitionsContainer");
+    const btnAddDef = document.getElementById("btnAddDef");
+
+    const searchEl = document.getElementById("search");
+    const btnClear = document.getElementById("btnClear");
+    const btnRefresh = document.getElementById("btnRefresh");
+    const btnPrintable = document.getElementById("btnPrintable");
+    const activeFilterContainer = document.getElementById("activeFilterContainer");
+    const btnLayout = document.getElementById("btnLayout");
+
+    const tagSuggestionsEl = document.getElementById("tagSuggestions");
+    const duplicateWarningEl = document.getElementById("duplicateWarning");
+    const viewExistingLink = document.getElementById("viewExisting");
+
+    const modalOverlay = document.getElementById("modalOverlay");
+
+    let unsubscribeWords = null;
+    let editingId = null;
+    let currentDocs = [];
+    let tagSet = new Set();
+    let activeTagFilter = null;
+    let activePosFilter = null;
+
+     // ------------- Stars: data + UI wiring -------------
+let activeStarFilter = null; // null = no star filter, otherwise 1/2/3
+const starsEl = document.getElementById('stars');
+
+// helper used to render stars in cards
+function renderStars(n){
+  n = Number(n) || 0;
+  let out = "";
+  for (let i=1;i<=3;i++){
+    out += `<span class="${i<=n ? 'filled' : 'empty'}" data-star="${i}">★</span>`;
+  }
+  return out;
+}
+
+// call/update star buttons UI in the form
+function updateStarButtonsUI(selected){
+  document.querySelectorAll('.star-btn').forEach(b=>{
+    b.classList.toggle('active', Number(b.dataset.value) === Number(selected));
+  });
+  starsEl && (starsEl.value = Number(selected||0));
+}
+
+// wire form star buttons (safe to call even if buttons not present yet)
+function wireFormStarControls(){
+  document.querySelectorAll('.star-btn').forEach(b=>{
+    b.onclick = (e) => {
+      const v = Number(b.dataset.value || 0);
+      updateStarButtonsUI(v);
+    };
+  });
+  const clear = document.getElementById('starClearBtn');
+  if (clear) clear.onclick = () => { updateStarButtonsUI(0); };
+}
+// initial wire (in case form exists at load)
+wireFormStarControls();
+updateStarButtonsUI(Number(starsEl?.value || 0));
+
+// Integrate star filter with active filter UI
+function setActiveStarFilter(n){
+  activeStarFilter = (n===null) ? null : Number(n);
+  renderActiveFilterUI();
+  renderCards();
+  showToast(activeStarFilter ? `Filtering stars: ${'★'.repeat(activeStarFilter)}` : 'Showing all stars');
+}
+function clearActiveStarFilter(){ setActiveStarFilter(null); }
+
+// Add star filter buttons wiring (toolbar)
+const sfAll = document.getElementById('starFilterAll');
+const sf1 = document.getElementById('starFilter1');
+const sf2 = document.getElementById('starFilter2');
+const sf3 = document.getElementById('starFilter3');
+if (sfAll) sfAll.onclick = ()=> clearActiveStarFilter();
+if (sf1) sf1.onclick = ()=> setActiveStarFilter(1);
+if (sf2) sf2.onclick = ()=> setActiveStarFilter(2);
+if (sf3) sf3.onclick = ()=> setActiveStarFilter(3);
+
+
+    // New globals for modal navigation
+    let modalVisibleDocs = [];
+    let modalCurrentIndex = -1;
+    let modalKeyHandler = null;
+
+    const showToast = (m) => {
+      toast.textContent = m;
+      toast.classList.remove("hidden");
+      toast.classList.add("show");
+      setTimeout(()=>{ toast.classList.remove("show"); toast.classList.add("hidden"); }, 1400);
+    };
+
+    const arr = (v) => v ? v.split(",").map(s=>s.trim()).filter(Boolean) : [];
+    const toMillis = (ts) => { try { return ts?.toMillis ? ts.toMillis() : (ts ? new Date(ts).getTime() : 0); } catch { return 0; } };
+
+    const POS_OPTIONS = [
+      ["noun","Noun"], ["verb","Verb"], ["adjective","Adjective"], ["adverb","Adverb"],
+      ["pronoun","Pronoun"], ["preposition","Preposition"], ["conjunction","Conjunction"],
+      ["interjection","Interjection"], ["determiner","Determiner"], ["auxiliary","Auxiliary"],
+      ["propernoun","Proper Noun"], ["phrase","Phrase"], ["phrasalverb","Phrasal Verb"]
+    ];
+
+    function createDefRow(pos="noun", labels="", meaning="", defSyn="", defAnt="", defExample="") {
+
+  const wrap = document.createElement("div");
+  wrap.className = "glass p-3 rounded-xl";
+  wrap.innerHTML = `
+    <div style="display:flex;gap:10px;flex-direction:column;">
+      <div style="display:flex;gap:10px;flex-direction:row;align-items:flex-start;flex-wrap:wrap;">
+        <select class="field def-pos" style="max-width:200px;">
+          ${POS_OPTIONS.map(([v,l]) => `<option value="${v}" ${v===pos?"selected":""}>${l}</option>`).join("")}
+        </select>
+        <input class=\"field def-labels\" placeholder=\"Labels (comma separated)\" style=\"max-width:220px;\" />
+        <textarea class="field def-meaning" rows="2" style="flex:1;min-width:220px;" placeholder="Enter definition meaning..." required></textarea>
+        <div style="min-width:160px;">
+          <input class="field def-syn" placeholder="Synonyms (comma separated)" />
+        </div>
+        <div style="min-width:160px;">
+          <input class="field def-ant" placeholder="Antonyms (comma separated)" />
+        </div>
+        <div style="min-width:240px;">
+          <textarea class="field def-example" rows="2" placeholder="Example sentence (optional)"></textarea>
+        </div>
+        <button type="button" class="btn btn-outline remove-def" style="white-space:nowrap; height:40px;">Remove</button>
+      </div>
+    </div>
+  `;
+  wrap.querySelector(".def-meaning").value = meaning;
+  
+  wrap.querySelector(".def-labels").value = labels;
+wrap.querySelector(".def-syn").value = defSyn;
+  wrap.querySelector(".def-ant").value = defAnt;
+  wrap.querySelector(".def-example").value = defExample;
+
+  const removeBtn = wrap.querySelector(".remove-def");
+  removeBtn.addEventListener("click", (ev) => {
+    ev.preventDefault();
+    ev.stopPropagation();
+    if (defsContainer.children.length > 1) wrap.remove();
+    else showToast("At least one definition is required");
+  });
+
+  return wrap;
+}
+    function ensureOneDefRow() {
+      if (defsContainer.children.length === 0) defsContainer.appendChild(createDefRow());
+    }
+
+    defsContainer.addEventListener('click', (ev) => {
+      const removeBtn = ev.target.closest('.remove-def');
+      if (!removeBtn) return;
+      ev.preventDefault();
+      ev.stopPropagation();
+      const row = removeBtn.closest('.glass');
+      if (!row) return;
+      if (defsContainer.children.length > 1) row.remove();
+      else showToast("At least one definition is required");
+    });
+
+    btnAddDef.addEventListener('click', (ev) => {
+      ev.preventDefault();
+      const newRow = createDefRow();
+      defsContainer.appendChild(newRow);
+      const ta = newRow.querySelector('.def-meaning');
+      if (ta) { ta.focus(); ta.selectionStart = ta.selectionEnd = ta.value.length; }
+    });
+
+    function updateTagSetFromDocs(){
+      tagSet = new Set();
+      for (const d of currentDocs){
+        if (Array.isArray(d.tags)) for (const t of d.tags) tagSet.add(t);
+      }
+    }
+
+    function showTagSuggestions(){
+      const raw = tagsEl.value || "";
+      const lastIdx = raw.lastIndexOf(',');
+      const currentToken = raw.slice(lastIdx+1).trim().toLowerCase();
+      const existing = raw.split(',').map(s=>s.trim()).filter(Boolean);
+      if (!currentToken){
+        const arrTags = Array.from(tagSet).slice(0,7);
+        renderTagSuggestions(arrTags, existing);
+        return;
+      }
+      const suggestions = Array.from(tagSet).filter(t => t.toLowerCase().includes(currentToken) && !existing.includes(t)).slice(0,7);
+      if (suggestions.length === 0){
+        tagSuggestionsEl.classList.add("hidden");
+        tagSuggestionsEl.innerHTML = "";
+        return;
+      }
+      renderTagSuggestions(suggestions, existing);
+    }
+    function renderTagSuggestions(list, existing){
+      tagSuggestionsEl.innerHTML = list.map(t => `<div class="suggestion-item" data-tag="${t}">${t}</div>`).join("");
+      tagSuggestionsEl.classList.remove("hidden");
+      [...tagSuggestionsEl.querySelectorAll(".suggestion-item")].forEach(el=>{
+        el.addEventListener("click", (ev)=>{
+          const tag = el.getAttribute("data-tag");
+          insertTagSuggestion(tag);
+        });
+      });
+    }
+    function insertTagSuggestion(tag){
+      const raw = tagsEl.value || "";
+      const idx = raw.lastIndexOf(',');
+      let prefix = idx === -1 ? "" : raw.slice(0, idx+1);
+      let newVal = (prefix + (prefix ? " " : "") + tag).trim();
+      if (!newVal.endsWith(',')) newVal = newVal + ', ';
+      tagsEl.value = newVal;
+      tagsEl.focus();
+      tagSuggestionsEl.classList.add("hidden");
+    }
+
+  function checkDuplicateForWord() {
+  const raw = (wordEl.value || "").trim();
+  const val = raw.toLowerCase();
+  if (!val) {
+    duplicateWarningEl.style.display = "none";
+    return;
+  }
+
+  // Helper: strip brackets → "ran (past tense)" -> "ran"
+  const normalize = (str) => (str || "").toLowerCase().replace(/\s*\(.*?\)\s*$/, "");
+
+  // 1) Check for main-word duplicates
+  const sameWord = currentDocs.find(
+    d => normalize(d.word) === val && d.id !== editingId
+  );
+  if (sameWord) {
+    duplicateWarningEl.style.display = "block";
+    duplicateWarningEl.innerHTML = `This word already exists as a main entry (<strong>${escapeHtml(sameWord.word)}</strong>). <a id="viewExisting">View</a>`;
+    const newLink = duplicateWarningEl.querySelector('#viewExisting');
+    if (newLink) newLink.onclick = (ev) => { ev.preventDefault(); openModalForWord(sameWord.id); };
+    return;
+  }
+
+  // 2) Check if entered word matches any "otherForms" (ignoring brackets)
+  const foundAsForm = currentDocs.find(d =>
+    (d.otherForms || [])
+      .map(f => normalize(f))
+      .includes(val) &&
+    d.id !== editingId
+  );
+  if (foundAsForm) {
+    duplicateWarningEl.style.display = "block";
+    duplicateWarningEl.innerHTML = `This word already exists as an <em>other form</em> of <strong>${escapeHtml(foundAsForm.word)}</strong>. <a id="viewExisting">View</a>`;
+    const newLink = duplicateWarningEl.querySelector('#viewExisting');
+    if (newLink) newLink.onclick = (ev) => { ev.preventDefault(); openModalForWord(foundAsForm.id); };
+    return;
+  }
+
+  duplicateWarningEl.style.display = "none";
+}
+
+
+
+    function escapeHtml(s){ if (!s && s !== 0) return ""; return String(s).replace(/[&<>\"']/g, function(m){ return ({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;',"'":'&#39;'})[m]; }); }
+    function capitalizeLabel(s){ if(!s) return s; return s.split(/[\s\-]/).map(p=>p.charAt(0).toUpperCase()+p.slice(1)).join(" "); }
+
+    
+
+// === Helpers for promoting search matches from otherForms ===
+function normalizeFormToken(str){ return (str || "").toLowerCase().replace(/\s*\(.*?\)\s*$/, "").trim(); }
+function computeDisplayOverrideForSearch(w, qText){
+  if (!qText) return null;
+  const q = qText.toLowerCase().trim();
+  const forms = Array.isArray(w.otherForms) ? w.otherForms : [];
+  const match = forms.find(f => normalizeFormToken(f) === q);
+  if (!match) return null;
+  const displayWord = match.replace(/\s*\(.*?\)\s*$/, "").trim();
+  const others = forms.filter(f => normalizeFormToken(f) !== q);
+  const baseForm = (w.word || '').trim();
+  const baseAsForm = baseForm ? `${baseForm} (base form)` : '';
+  const displayOtherForms = baseAsForm ? [baseAsForm, ...others] : others;
+  return { displayWord, displayOtherForms };
+}
+
+/* Helper to build definition blocks (used by cards and modal) */
+    function buildDefsHtmlForDisplay(w, forModal){
+  const defs = Array.isArray(w.definitions) ? w.definitions : (w.meaning ? [{pos:"noun", meaning:w.meaning}] : []);
+  if (!defs.length) return '';
+
+  const targets = Array.from(new Set((currentDocs || []).map(d => d.word).filter(Boolean))).filter(t => t.toLowerCase() !== (w.word || '').toLowerCase());
+  targets.sort((a,b) => b.length - a.length);
+  function escapeRegExp(s){ return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }
+
+  function linkifyText(text){
+    if (!targets.length || !text) return escapeHtml(text || '');
+    const pattern = targets.map(escapeRegExp).join('|');
+    const regex = new RegExp('\\b(' + pattern + ')\\b','gi');
+    let lastIndex = 0; let res = ''; let m;
+    while ((m = regex.exec(text)) !== null){
+      const matchText = m[0];
+      const idx = m.index;
+      res += escapeHtml(text.slice(lastIndex, idx));
+      const found = currentDocs.find(d2 => (d2.word||'').toLowerCase() === matchText.toLowerCase());
+      if (found){ res += `<span class="token-pill xref" data-type="xref">${escapeHtml(found.word)}</span>`; }
+      else { res += escapeHtml(matchText); }
+      lastIndex = regex.lastIndex;
+    }
+    res += escapeHtml(text.slice(lastIndex));
+    return res;
+  }
+
+  return defs.map((d,i)=>{
+    const synArr = (d.synonyms && d.synonyms.length) ? d.synonyms : (w.synonyms && w.synonyms.length ? w.synonyms : []);
+    const antArr = (d.antonyms && d.antonyms.length) ? d.antonyms : (w.antonyms && w.antonyms.length ? w.antonyms : []);
+    const synBlock = synArr.length ? `<div style="margin-top:8px;"><div style="font-weight:700;margin-bottom:6px;color:${forModal? '#0f172a':'#fff'};">Synonyms</div><div>${synArr.map(s=>`<span class="pill pill-syn token-pill" data-type="syn">${escapeHtml(s)}</span>`).join('')}</div></div>` : '';
+    const antBlock = antArr.length ? `<div style="margin-top:8px;"><div style="font-weight:700;margin-top:10px;margin-bottom:6px;color:${forModal? '#0f172a':'#fff'};">Antonyms</div><div>${antArr.map(a=>`<span class="pill pill-ant token-pill" data-type="ant">${escapeHtml(a)}</span>`).join('')}</div></div>` : '';
+    const exampleBlock = (d.example) ? `<div style="margin-top:8px;"><div style="font-weight:700;margin-bottom:6px;color:${forModal? '#0f172a':'#fff'};">Example</div><div>${escapeHtml(d.example)}</div></div>` : '';
+    const meaningHtml = linkifyText(d.meaning || '');
+    return `
+      <div class="def-item">
+        <div class="def-num">${i+1}</div>
+        <div style="flex:1;">
+          <div style="margin-bottom:6px;">
+        <span class="pos-badge ${(d.pos||"noun").toLowerCase().replace(/[^a-z]/g,"")}" data-pos="${escapeHtml(d.pos||'noun')}">${escapeHtml(capitalizeLabel(d.pos||"noun"))}</span>
+        ${ (Array.isArray(d.labels) && d.labels.length)
+            ? '<span class="def-labels">' + d.labels.map(l => `<span class="label-badge">${escapeHtml(l)}</span>`).join('') + '</span>'
+            : '' }
+      </div>
+          <div class="def-text">${meaningHtml}</div>
+          ${synBlock}
+          ${antBlock}
+          ${exampleBlock}
+        </div>
+      </div>`;
+  }).join('');
+}
+
+    // New: reuse filtering logic so modal navigation follows the same visible set
+    function getFilteredDocs(){
+      const qText = (searchEl.value || "").toLowerCase().trim();
+      return currentDocs.filter(w => {
+        if (activeTagFilter){
+          const tags = (w.tags || []).map(t => (t||'').toLowerCase());
+          if (!tags.includes(activeTagFilter.toLowerCase())) return false;
+        }
+        if (activePosFilter){
+          const defs = Array.isArray(w.definitions) ? w.definitions : [];
+          const hasPos = defs.some(d => (d.pos||'').toLowerCase() === activePosFilter.toLowerCase());
+          if (!hasPos) return false;
+        }
+       if (activeStarFilter !== null) {
+  const s = Number(w.stars || 0);
+  if (s !== Number(activeStarFilter)) return false;
+}
+
+        if (!qText) return true;
+        const parts = [w.word, ...(w.tags||[]), ...(w.synonyms||[]), ...(w.antonyms||[]), ...(w.otherForms||[])];
+
+        if (Array.isArray(w.definitions)) for (const d of w.definitions) parts.push(d.meaning, d.pos, ...(d.synonyms||[]), ...(d.antonyms||[]));
+        return parts.join(" ").toLowerCase().includes(qText);
+      });
+    }
+
+    function openModalForWord(id){
+      const w = currentDocs.find(x => x.id === id);
+      if (!w) return;
+      modalOverlay.innerHTML = '';
+      const outer = document.createElement('div');
+      outer.className = 'modal-overlay';
+      outer.id = '__modalOverlayInner';
+
+      const defsHtml = buildDefsHtmlForDisplay(w, true);
+
+      
+      const __searchQ = (searchEl.value || "").toLowerCase().trim();
+      const __override = computeDisplayOverrideForSearch(w, __searchQ);
+      const __displayWord = (__override && __override.displayWord) ? __override.displayWord : w.word;
+      const __displayForms = (__override && __override.displayOtherForms) ? __override.displayOtherForms : (w.otherForms || []);
+    // compute visible docs & index for modal navigation
+      modalVisibleDocs = getFilteredDocs();
+      modalCurrentIndex = modalVisibleDocs.findIndex(x => x.id === id);
+      if (modalCurrentIndex === -1){ modalVisibleDocs = currentDocs.slice(); modalCurrentIndex = modalVisibleDocs.findIndex(x => x.id === id); }
+
+      outer.innerHTML = `
+        <div class="modal-card">
+          <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;">
+            <div>
+              <div style="font-weight:900;font-size:1.6rem;color:#0f172a;">${escapeHtml(__displayWord)}</div>
+              <div style="margin-top:6px;" class="other-forms">${(w.tags||[]).map(t=>`<span class="pill pill-tag token-pill" data-type="tag">${escapeHtml(t)}</span>`).join('')}${(w.otherForms && w.otherForms.length) ? '<span style="margin-left:8px;opacity:0.9;font-weight:700;color:#374151;">Other forms:</span> ' + (w.otherForms||[]).map(f => {
+  const match = f.match(/^(.+?)\s*\((.+)\)$/); 
+  // Extracts: "ran (past tense)" => main="ran", label="past tense"
+  if (match) {
+    const main = escapeHtml(match[1].trim());
+    const label = escapeHtml(match[2].trim());
+    return `<span class="pill pill-form token-pill" data-type="form">
+              ${main} <span class="form-label">${label}</span>
+            </span>`;
+  }
+  // No bracket → normal display
+  return `<span class="pill pill-form token-pill" data-type="form">${escapeHtml(f)}</span>`;
+}).join(' ')
+
+ : ''}</div>
+            </div>
+        <div style="display:flex;gap:10px;align-items:center;">
+  <button id="modalPrev" display:none class="btn btn-outline" title="Previous">◀</button>
+  
+  <!-- Position indicator -->
+  <div id="modalPosition" 
+       style="font-weight:700;min-width:60px;text-align:center;color:#374151;">
+    ${modalCurrentIndex + 1} / ${modalVisibleDocs.length}
+  </div>
+  
+
+<div id="modalStar" class="star-indicator" data-id="${w.id}" title="Click to cycle stars">
+  ${renderStars(w.stars || 0)}
+</div>
+
+
+  <button id="modalNext" class="btn btn-outline" title="Next">▶</button>
+  <button class="modal-close" id="modalCloseBtn" title="Close">✕</button>
+</div>
+
+
+          <div style="margin-top:14px;max-height:56vh;overflow:auto;padding-right:6px;">
+            ${ defsHtml || `<div class="def-item"><div class="def-text">No definitions.</div></div>` }
+          </div>
+
+          <div class="modal-actions">
+            <button id="modalEdit" class="btn btn-outline">Edit</button>
+            <button id="modalDelete" class="btn btn-red">Delete</button>
+          </div>
+        </div>
+      `;
+
+      modalOverlay.appendChild(outer);
+      // === Wire modal star click ===
+const modalStar = outer.querySelector('#modalStar');
+if (modalStar) {
+ modalStar.onclick = async (ev) => {
+  ev.stopPropagation();
+
+  // Ensure we only handle clicks on <span data-star="">
+  const target = ev.target.closest('span[data-star]');
+  if (!target) return;
+
+  const id = modalStar.getAttribute('data-id');
+  const selected = parseInt(target.dataset.star);
+
+  const docObj = currentDocs.find(d => d.id === id);
+  const current = Number(docObj?.stars || 0);
+
+  // If clicking the same star → reset to 0
+  const next = selected === current ? 0 : selected;
+
+  try {
+    await updateDoc(doc(db, 'words', id), { stars: next });
+
+    // Update modal UI immediately
+    modalStar.innerHTML = renderStars(next);
+
+    // Update in-memory data
+    const idx = currentDocs.findIndex(d => d.id === id);
+    if (idx !== -1) currentDocs[idx].stars = next;
+
+    // Update card UI if it's visible
+    const cardStar = document.querySelector(`.star-indicator[data-id="${id}"]`);
+    if (cardStar) cardStar.innerHTML = renderStars(next);
+
+    renderActiveFilterUI();
+    showToast(next ? `${'★'.repeat(next)} set` : 'Stars cleared');
+  } catch (err) {
+    console.error(err);
+    showToast('Failed to update stars');
+  }
+};
+
+}
+
+      modalOverlay.classList.remove('hidden');
+      document.body.style.overflow = 'hidden';
+
+      // wire events
+      outer.addEventListener('click', (ev) => {
+        if (ev.target === outer) closeModal();
+      });
+      outer.querySelector('#modalCloseBtn').onclick = closeModal;
+      outer.querySelector('#modalEdit').onclick = () => { closeModal(); prefillForEdit(w.id); };
+      outer.querySelector('#modalDelete').onclick = async () => {
+        if (!confirm('Delete this word?')) return;
+        try { await deleteDoc(doc(db,'words',w.id)); closeModal(); showToast('Deleted'); }
+        catch(e){ console.error(e); showToast('Delete failed'); }
+      };
+
+      // navigation buttons
+      const prevBtn = outer.querySelector('#modalPrev');
+      const nextBtn = outer.querySelector('#modalNext');
+      prevBtn.onclick = (ev) => { ev.stopPropagation(); if (!modalVisibleDocs.length) return; const newIdx = (modalCurrentIndex -1 + modalVisibleDocs.length) % modalVisibleDocs.length; const newId = modalVisibleDocs[newIdx].id; closeModal(); openModalForWord(newId); };
+      nextBtn.onclick = (ev) => { ev.stopPropagation(); if (!modalVisibleDocs.length) return; const newIdx = (modalCurrentIndex +1) % modalVisibleDocs.length; const newId = modalVisibleDocs[newIdx].id; closeModal(); openModalForWord(newId); };
+   // Update position indicator when modal is opened
+const updateModalPosition = () => {
+  const posEl = outer.querySelector('#modalPosition');
+  if (posEl) posEl.textContent = `${modalCurrentIndex + 1} / ${modalVisibleDocs.length}`;
+};
+updateModalPosition();
+
+// Refresh position when navigating
+prevBtn.onclick = (ev) => {
+  ev.stopPropagation();
+  if (!modalVisibleDocs.length) return;
+  const newIdx = (modalCurrentIndex - 1 + modalVisibleDocs.length) % modalVisibleDocs.length;
+  const newId = modalVisibleDocs[newIdx].id;
+  openModalForWord(newId);
+};
+
+nextBtn.onclick = (ev) => {
+  ev.stopPropagation();
+  if (!modalVisibleDocs.length) return;
+  const newIdx = (modalCurrentIndex + 1) % modalVisibleDocs.length;
+  const newId = modalVisibleDocs[newIdx].id;
+  openModalForWord(newId);
+};
+
+      // keyboard nav (left/right)
+      if (modalKeyHandler) { document.removeEventListener('keydown', modalKeyHandler); modalKeyHandler = null; }
+      modalKeyHandler = function(e){ if (e.key === 'ArrowLeft') { prevBtn.click(); } else if (e.key === 'ArrowRight') { nextBtn.click(); } };
+      document.addEventListener('keydown', modalKeyHandler);
+
+      // wire token pills and pos badges inside modal
+      wireTokenPills(outer);
+      wirePosBadges(outer);
+    }
+
+    function closeModal(){
+      modalOverlay.classList.add('hidden');
+      modalOverlay.innerHTML = '';
+      document.body.style.overflow = '';
+      if (modalKeyHandler){ document.removeEventListener('keydown', modalKeyHandler); modalKeyHandler = null; }
+    }
+    document.addEventListener('keydown', (e)=> { if (e.key === 'Escape') closeModal(); });
+
+    function prefillForEdit(id){
+  const w = currentDocs.find(d => d.id === id);
+  if (!w) return;
+  editingId = id;
+  wordEl.value = w.word || "";
+  synonymsEl.value = (w.synonyms||[]).join(", ");
+  antonymsEl.value = (w.antonyms||[]).join(", ");
+  tagsEl.value = (w.tags||[]).join(", ");
+  otherFormsEl.value = (w.otherForms||[]).join(", ");
+  // set the stars in the form when editing
+if (typeof w.stars !== 'undefined'){
+  updateStarButtonsUI(Number(w.stars || 0));
+} else {
+  updateStarButtonsUI(0);
+}
+
+  defsContainer.innerHTML = "";
+  const defs = Array.isArray(w.definitions) ? w.definitions : (w.meaning ? [{pos:"noun", meaning:w.meaning}] : []);
+  if (defs.length === 0) defsContainer.appendChild(createDefRow());
+  else defs.forEach(d => 
+    defsContainer.appendChild(
+        createDefRow(
+            d.pos || "noun",
+            (d.labels || []).join(", "),
+            d.meaning || "",
+            (d.synonyms || []).join(", "),
+            (d.antonyms || []).join(", "),
+            d.example || ""
+        )
+    )
+);
+btnCancelEdit.style.display = 'inline-flex';
+
+  window.scrollTo({ top: 0, behavior: "smooth" });
+}
+
+    wordForm.onsubmit = async (ev) => {
+      ev.preventDefault();
+      const user = auth.currentUser;
+      if (!user) return showToast("Please login first");
+
+      
+      const defs = Array.from(defsContainer.children).map(row=>{
+        const pos = row.querySelector(".def-pos").value;
+        const meaning = row.querySelector(".def-meaning").value.trim();
+        const ds = (row.querySelector(".def-syn").value || "").split(",").map(s=>s.trim()).filter(Boolean);
+        const da = (row.querySelector(".def-ant").value || "").split(",").map(s=>s.trim()).filter(Boolean);
+        const ex = (row.querySelector(".def-example").value || "").trim();
+        const dl = (row.querySelector(".def-labels") ? row.querySelector(".def-labels").value : "").split(",").map(s=>s.trim()).filter(Boolean);
+        return meaning ? { pos, meaning, labels: dl, synonyms: ds, antonyms: da, example: ex } : null;
+      }).filter(Boolean);
+
+      const payload = {
+        word: wordEl.value.trim(),
+        definitions: defs,
+        synonyms: arr(synonymsEl.value),
+        antonyms: arr(antonymsEl.value),
+        tags: arr(tagsEl.value),
+        otherForms: arr(otherFormsEl.value),
+        stars: Number(starsEl.value || 0),    // <-- NEW
+        uid: user.uid,
+      };
+
+// --- NEW: prevent accidental duplicates that exist as otherForms ---
+const newWordLower = (payload.word || "").trim().toLowerCase();
+const normalize = (str) => (str || "").toLowerCase().replace(/\s*\(.*?\)\s*$/, "");
+
+const conflict = currentDocs.find(d =>
+  d.id !== editingId && (
+    normalize(d.word) === newWordLower ||
+    (d.otherForms || []).map(f => normalize(f)).includes(newWordLower)
+  )
+);
+
+if (conflict){
+  const friendly = ((conflict.word||'').toLowerCase() === newWordLower)
+    ? `A word named "${payload.word}" already exists.`
+    : `The word "${payload.word}" already exists as an other-form of "${conflict.word}".`;
+  if (!confirm(friendly + " Save anyway?")) return showToast('Save cancelled');
+}
+
+
+      try {
+        if (editingId){
+          await updateDoc(doc(db,"words",editingId), payload);
+          showToast("Updated");
+        } else {
+          await addDoc(collection(db,"words"), { ...payload, createdAt: serverTimestamp() });
+          showToast("Saved");
+        }
+        wordForm.reset();
+        defsContainer.innerHTML = '';
+        ensureOneDefRow();
+        editingId = null;
+        btnCancelEdit.style.display = 'none';
+      } catch (e) {
+        console.error(e);
+        showToast("Save failed");
+      }
+    };
+
+    btnCancelEdit.onclick = () => {
+      editingId = null;
+      wordForm.reset();
+      defsContainer.innerHTML = '';
+      ensureOneDefRow();
+      btnCancelEdit.style.display = 'none';
+      showToast("Edit cancelled");
+    };
+
+  function wireTokenPills(root){
+  if (!root) root = document;
+  const pills = root.querySelectorAll('.token-pill');
+  pills.forEach(pill => {
+    const tokenText = (pill.textContent || '').trim();
+    if (!tokenText) return;
+    pill.onclick = null; pill.onkeydown = null;
+    pill.classList.remove('clickable','disabled');
+
+    const type = pill.getAttribute('data-type') || '';
+
+    if (type === 'tag'){
+      // unchanged behavior for tags
+      pill.classList.add('clickable');
+      pill.setAttribute('tabindex','0');
+      pill.onclick = (ev) => { ev.stopPropagation(); setActiveTagFilter(tokenText); closeModal(); };
+      pill.onkeydown = (ev) => { if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); setActiveTagFilter(tokenText); closeModal(); } };
+      return;
+    }
+
+    // special handling for "form" tokens (otherForms)
+    if (type === 'form'){
+      // strip trailing bracketed hints like "ran (verb)" -> "ran"
+      const base = tokenText.replace(/\s*\(.*\)\s*$/, '').trim();
+      const found = currentDocs.find(d => (d.word||'').toLowerCase() === base.toLowerCase());
+      pill.addEventListener('click', (ev)=> ev.stopPropagation(), { once: false });
+      if (found){
+        pill.classList.add('clickable');
+        pill.setAttribute('tabindex','0');
+        pill.onclick = (ev) => { ev.stopPropagation(); openModalForWord(found.id); };
+        pill.onkeydown = (ev) => { if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); ev.stopPropagation(); openModalForWord(found.id); } };
+      } else {
+        pill.classList.add('disabled');
+        pill.setAttribute('aria-disabled','true');
+        pill.setAttribute('tabindex','-1');
+      }
+      return;
+    }
+
+    // generic token handling (syn/ant/results etc.)
+    const found = currentDocs.find(d => (d.word||'').toLowerCase() === tokenText.toLowerCase());
+    pill.addEventListener('click', (ev)=> ev.stopPropagation(), { once: false });
+    if (found){
+      pill.classList.add('clickable');
+      pill.setAttribute('tabindex','0');
+      pill.onclick = (ev) => { ev.stopPropagation(); openModalForWord(found.id); };
+      pill.onkeydown = (ev) => { if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); ev.stopPropagation(); openModalForWord(found.id); } };
+    } else {
+      pill.classList.add('disabled');
+      pill.setAttribute('aria-disabled','true');
+      pill.setAttribute('tabindex','-1');
+    }
+  });
+}
+
+
+    function wirePosBadges(root){
+      if (!root) root = document;
+      const badges = root.querySelectorAll('.pos-badge');
+      badges.forEach(b => {
+        const posAttr = (b.getAttribute('data-pos') || b.textContent || '').trim();
+        if (!posAttr) return;
+        const posVal = posAttr.toLowerCase();
+        b.onclick = null; b.onkeydown = null;
+        b.classList.remove('clickable');
+        b.addEventListener('click', ev => ev.stopPropagation(), { once:false });
+        b.classList.add('clickable');
+        b.setAttribute('tabindex','0');
+        b.onclick = (ev) => { ev.stopPropagation(); setActivePosFilter(posVal); closeModal(); };
+        b.onkeydown = (ev) => { if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); ev.stopPropagation(); setActivePosFilter(posVal); closeModal(); } };
+      });
+    }
+
+    function setActiveTagFilter(tag){
+      activeTagFilter = tag;
+      renderActiveFilterUI();
+      renderCards();
+      showToast(`Filtering tag: ${tag}`);
+    }
+    function clearActiveTagFilter(){ activeTagFilter = null; renderActiveFilterUI(); renderCards(); showToast("Tag filter cleared"); }
+
+    function setActivePosFilter(pos){ activePosFilter = pos; renderActiveFilterUI(); renderCards(); showToast(`Filtering POS: ${capitalizeLabel(pos)}`); }
+    function clearActivePosFilter(){ activePosFilter = null; renderActiveFilterUI(); renderCards(); showToast("POS filter cleared"); }
+
+   function renderActiveFilterUI(){
+  const parts = [];
+  if (activeTagFilter) parts.push(`<span class="active-filter">Tag: ${escapeHtml(activeTagFilter)} <button id="clearTagFilterBtn" title="Clear tag filter">×</button></span>`);
+  if (activePosFilter) parts.push(`<span class="active-filter">POS: ${escapeHtml(capitalizeLabel(activePosFilter))} <button id="clearPosFilterBtn" title="Clear POS filter">×</button></span>`);
+  if (activeStarFilter) parts.push(`<span class="active-filter">Stars: ${'★'.repeat(activeStarFilter)} <button id="clearStarFilterBtn" title="Clear star filter">×</button></span>`);
+  activeFilterContainer.innerHTML = parts.join(' ');
+  const clearTagBtn = document.getElementById('clearTagFilterBtn');
+  if (clearTagBtn) clearTagBtn.onclick = clearActiveTagFilter;
+  const clearPosBtn = document.getElementById('clearPosFilterBtn');
+  if (clearPosBtn) clearPosBtn.onclick = clearActivePosFilter;
+  const clearStarBtn = document.getElementById('clearStarFilterBtn');
+  if (clearStarBtn) clearStarBtn.onclick = clearActiveStarFilter;
+}
+
+    function subscribeToWords(){
+      const user = auth.currentUser;
+      if (!user) return;
+      if (unsubscribeWords) { unsubscribeWords(); unsubscribeWords = null; }
+      const qWords = query(collection(db,"words"), where("uid","==", user.uid));
+      unsubscribeWords = onSnapshot(qWords, snap => {
+        const docs = [];
+        snap.forEach(d => docs.push({ id: d.id, ...d.data() }));
+        docs.sort((a,b) => toMillis(b.createdAt) - toMillis(a.createdAt));
+        currentDocs = docs;
+        updateTagSetFromDocs();
+        renderCards();
+      }, err => { console.error(err); showToast("Listener error"); });
+    }
+
+    /* Layout control: cycles Compact / Normal / Large without changing DB or logic */
+    const LAYOUTS = [
+      { key: 'compact', label: 'Compact', cols: 'repeat(3, 1fr)', gap: '12px', height: '12rem' },
+      { key: 'normal', label: 'Normal', cols: 'repeat(2, 1fr)', gap: '20px', height: '17.5rem' },
+      { key: 'large', label: 'Large', cols: 'repeat(1, 1fr)', gap: '22px', height: '22rem' }
+    ];
+    let currentLayoutIndex = 1; // default normal
+    function applyLayout(index){
+      const l = LAYOUTS[index];
+      wordsContainer.style.gridTemplateColumns = l.cols;
+      wordsContainer.style.gap = l.gap;
+      wordsContainer.style.setProperty('--card-height', l.height);
+      btnLayout.textContent = `Size: ${l.label}`;
+      localStorage.setItem('mwv_layout', l.key);
+      currentLayoutIndex = index;
+    }
+    (function initLayout(){
+      const saved = localStorage.getItem('mwv_layout');
+      let idx = LAYOUTS.findIndex(x=>x.key===saved);
+      if (idx === -1) idx = 1;
+      applyLayout(idx);
+    })();
+    btnLayout.onclick = ()=> { applyLayout((currentLayoutIndex+1)%LAYOUTS.length); };
+
+    function renderCards(){
+      // use centralized filter so modal navigation matches displayed set
+      const filtered = getFilteredDocs();
+
+      wordCountEl.textContent = currentDocs.length;
+      if (!filtered.length){
+        wordsContainer.innerHTML = `<div class="text-white/85 italic">No words found. Add one or adjust your search.</div>`;
+
+
+        return;
+      }
+
+      wordsContainer.innerHTML = '';
+      filtered.forEach((w, idx) => {
+        const starHtml = `
+  <div class="star-indicator" data-id="${w.id}" title="Click to cycle stars">
+    ${renderStars(w.stars || 0)}
+  </div>
+`;
+
+        const defs = Array.isArray(w.definitions) ? w.definitions : (w.meaning ? [{pos:"noun", meaning:w.meaning}] : []);
+        const firstDef = defs[0]?.meaning || '';
+        const card = document.createElement('div');
+        card.className = 'flip group cursor-pointer relative';
+        const __qText = (searchEl.value || '').toLowerCase().trim();
+        const __ovr = computeDisplayOverrideForSearch(w, __qText);
+        const displayWord = (__ovr && __ovr.displayWord) ? __ovr.displayWord : (w.word || '');
+        card.dataset.id = w.id;
+
+        // compute consolidated synonyms & antonyms for side column
+        const defsArray = Array.isArray(w.definitions) ? w.definitions : [];
+        const synAll = Array.from(new Set([...(w.synonyms||[]), ...defsArray.flatMap(d=>d.synonyms||[])] )).filter(Boolean);
+        const antAll = Array.from(new Set([...(w.antonyms||[]), ...defsArray.flatMap(d=>d.antonyms||[])] )).filter(Boolean);
+        const defsHtml = buildDefsHtmlForDisplay(w, false) || '<div class="def-item"><div class="def-text">No definitions</div></div>';
+
+        const isLarge = LAYOUTS[currentLayoutIndex].key === 'large';
+
+        if (isLarge && (synAll.length || antAll.length)){
+          const sideHtml = `
+            <div style="min-width:220px;padding:12px;padding-left:14px;border-left:1px solid rgba(255,255,255,.06);height:100%;box-sizing:border-box;">
+              ${synAll.length ? '<div style="font-weight:800;margin-bottom:8px;color:#fff;">Synonyms</div><div>' + synAll.map(s=>`<span class="pill pill-syn token-pill" data-type="syn">${escapeHtml(s)}</span>`).join('') + '</div>' : ''}
+              ${antAll.length ? '<div style="font-weight:800;margin-top:12px;margin-bottom:8px;color:#fff;">Antonyms</div><div>' + antAll.map(a=>`<span class="pill pill-ant token-pill" data-type="ant">${escapeHtml(a)}</span>`).join('') + '</div>' : ''}
+            </div>
+          `;
+
+          // large layout with side column
+          card.innerHTML = `
+            <div class="flip-inner">
+              <div class="flip-face card-front">
+                <div style="position:relative;">
+                  <div style="display:flex;justify-content:space-between;align-items:start;">
+                    <div>
+                      <div class="word-title">${escapeHtml(displayWord)}</div>
+                      
+                      <div class="summary">${escapeHtml(firstDef)}</div>
+                    </div>
+                   <div> ${starHtml}</div>
+                  </div>
+                </div>
+                <div style="margin-top:8px;" class="word-meta">${(w.tags||[]).map(t=>`<span class="pill pill-tag token-pill" data-type="tag">${escapeHtml(t)}</span>`).join('')}</div>
+              </div>
+              <div class="flip-face card-back" style="flex-direction:row;align-items:stretch;padding:0;">
+                <div style="display:flex;flex-direction:column;height:100%;width:100%;">
+                  <div style="display:flex;flex:1;overflow:auto;">
+                    <div style="flex:1; overflow:auto; padding:18px; padding-right:8px;">${defsHtml}</div>
+                    ${sideHtml}
+                  </div>
+                  <div style="display:flex;gap:8px;padding:12px;justify-content:flex-end;background:transparent;">
+                    <button class="btn btn-outline text-xs" data-action="edit" data-id="${w.id}">Edit</button>
+                    <button class="btn btn-red text-xs" data-action="del" data-id="${w.id}">Delete</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          `;
+        } else {
+          // default (compact/normal) layout
+          const tagsHtml = (w.tags||[]).map(t=>`<span class="pill pill-tag token-pill" data-type="tag">${escapeHtml(t)}</span>`).join('');
+
+          card.innerHTML = `
+            <div class="flip-inner">
+              <div class="flip-face card-front">
+                <div style="position:relative;">
+                  <div style="display:flex;justify-content:space-between;align-items:start;">
+                    <div>
+                      <div class="word-title">${escapeHtml(displayWord)}</div>
+                      <div class="summary">${escapeHtml(firstDef)}</div>
+                    </div>
+                  </div>
+                </div>
+                <div style="margin-top:8px;" class="word-meta">${tagsHtml}</div>
+              </div>
+              <div class="flip-face card-back">
+                <div style="margin-left:12px;display:flex;flex-direction:column;align-items:flex-end;">
+                  <div style="position:relative;">
+                    <div class="card-dot" data-dot-id="${w.id}" title="Open"></div>
+                  </div>
+                </div>
+                <div style="overflow:auto; max-height:10.5rem; padding-right:6px; padding-left:12px;">${defsHtml}</div>
+                <div style="display:flex;gap:8px;padding-top:8px;">
+                  <button class="btn btn-outline text-xs" data-action="edit" data-id="${w.id}">Edit</button>
+                  <button class="btn btn-red text-xs" data-action="del" data-id="${w.id}">Delete</button>
+                </div>
+              </div>
+            </div>
+          `;
+        }
+
+        // append and stagger entrance animation slightly
+        wordsContainer.appendChild(card);
+        setTimeout(()=>{ card.classList.add('visible'); card.style.animation = `cardIn .36s ease ${idx*40}ms both`; }, 20);
+      });
+
+      // wire dots (stopPropagation to prevent flip)
+      [...wordsContainer.querySelectorAll('.card-dot')].forEach(dot=>{
+        dot.addEventListener('click', (ev)=>{
+          ev.stopPropagation();
+          const id = dot.getAttribute('data-dot-id');
+          openModalForWord(id);
+        });
+      });
+
+      // flips on click (but ignore action buttons)
+      [...wordsContainer.querySelectorAll('.flip')].forEach(card => {
+        card.addEventListener('click', (ev) => {
+          const btn = ev.target.closest('button[data-action]');
+          if (btn) return;
+          card.classList.toggle('flipped');
+        });
+      });
+
+      // edit & delete
+      [...wordsContainer.querySelectorAll("button[data-action='edit']")].forEach(btn=>{
+        btn.onclick = (e) => { e.stopPropagation(); prefillForEdit(btn.dataset.id); };
+      });
+      [...wordsContainer.querySelectorAll("button[data-action='del']")].forEach(btn=>{
+        btn.onclick = async (e) => {
+          e.stopPropagation();
+          const id = btn.dataset.id;
+          if (!confirm('Delete this word?')) return;
+          try { await deleteDoc(doc(db,'words',id)); showToast('Deleted'); }
+          catch (er) { console.error(er); showToast('Delete failed'); }
+        };
+      });
+// === Wire card stars ===
+[...wordsContainer.querySelectorAll('.star-indicator')].forEach(el => {
+  if (el.dataset.wired) return; // avoid double-wiring
+  el.dataset.wired = '1';
+  el.onclick = async (ev) => {
+    ev.stopPropagation();
+    const id = el.getAttribute('data-id');
+    const docObj = currentDocs.find(d => d.id === id);
+    const current = Number(docObj?.stars || 0);
+    const next = (current + 1) % 4;
+    try {
+      await updateDoc(doc(db, 'words', id), { stars: next });
+
+      // Update card UI instantly
+      el.innerHTML = renderStars(next);
+
+      // Update memory
+      const idx = currentDocs.findIndex(d => d.id === id);
+      if (idx !== -1) currentDocs[idx].stars = next;
+
+      // If modal is open for this word, sync modal star
+      const modalStarEl = document.querySelector('#__modalOverlayInner #modalStar');
+      if (modalStarEl && modalStarEl.getAttribute('data-id') === id) {
+        modalStarEl.innerHTML = renderStars(next);
+      }
+
+      renderActiveFilterUI();
+      showToast(next ? `${'★'.repeat(next)} set` : 'Stars cleared');
+    } catch (err) {
+      console.error(err);
+      showToast('Failed to update stars');
+    }
+  };
+});
+
+      // wire token pills & pos badges
+      wireTokenPills(wordsContainer);
+      wirePosBadges(wordsContainer);
+    }
+
+    document.addEventListener('click', (e)=>{
+      if (!tagsEl.contains(e.target) && !tagSuggestionsEl.contains(e.target)) tagSuggestionsEl.classList.add('hidden');
+    });
+
+    searchEl.addEventListener('input', ()=> renderCards());
+    btnClear.onclick = ()=> { searchEl.value=''; clearActiveTagFilter(); clearActivePosFilter(); renderCards(); };
+    btnRefresh.onclick = ()=> { subscribeToWords(); showToast('Refreshed'); };
+
+    btnLogin.onclick = async ()=> {
+      const email = emailEl.value.trim(), pw = passwordEl.value;
+      if (!email || !pw) return showToast('Enter email & password');
+      try { await signInWithEmailAndPassword(auth,email,pw); showToast('Logged in'); }
+      catch (e){ showToast(e.message || 'Login failed'); }
+    };
+    btnSignUp.onclick = async ()=> {
+      const email = emailEl.value.trim(), pw = passwordEl.value;
+      if (!email || !pw) return showToast('Enter email & password');
+      try { await createUserWithEmailAndPassword(auth,email,pw); showToast('Account created'); }
+      catch (e){ showToast(e.message || 'Sign up failed'); }
+    };
+    btnLogout.onclick = async ()=> {
+      if (unsubscribeWords){ unsubscribeWords(); unsubscribeWords = null; }
+      await signOut(auth);
+      wordsContainer.innerHTML = '';
+      showToast('Logged out');
+    };
+
+    onAuthStateChanged(auth, (user) => {
+      if (user){
+        authSection.classList.add('hidden');
+        appSection.classList.remove('hidden');
+        userBar.classList.remove('hidden');
+        whoami.textContent = user.email || user.uid;
+        defsContainer.innerHTML = '';
+        ensureOneDefRow();
+        subscribeToWords();
+      } else {
+        authSection.classList.remove('hidden');
+        appSection.classList.add('hidden');
+        userBar.classList.add('hidden');
+        currentDocs = [];
+        wordsContainer.innerHTML = '';
+        defsContainer.innerHTML = '';
+        ensureOneDefRow();
+      }
+    });
+
+    ensureOneDefRow();
+
+    tagsEl.addEventListener('input', showTagSuggestions);
+    tagsEl.addEventListener('focus', showTagSuggestions);
+    tagsEl.addEventListener('blur', ()=> { setTimeout(()=>{ tagSuggestionsEl.classList.add("hidden"); }, 160); });
+
+    wordEl.addEventListener('input', checkDuplicateForWord);
+
+    // Printable view: opens a new window with snapshot of currentDocs (all words)
+    btnPrintable.addEventListener('click', (ev) => {
+      ev.preventDefault();
+      openPrintableWindow();
+    });
+
+   function buildPrintableHtml(docs){
+  const css = `
+    body{ font-family: Arial, Helvetica, sans-serif; margin:18px; color:#0b1220; background:#f4f6f8; }
+    header{ display:flex; justify-content:space-between; align-items:center; gap:10px; margin-bottom:18px; }
+    h1{ margin:0; font-size:24px; }
+    .controls { display:flex; gap:8px; }
+    .btn { padding:8px 12px; border-radius:8px; border:none; cursor:pointer; font-weight:700; }
+    .btn-print { background:#0b1220; color:#fff; }
+    .btn-close { background:#e5e7eb; color:#0b1220; }
+    main{ display:block; }
+    .word-card{ background:#fff; border:1px solid #e6e9ee; padding:14px; margin-bottom:14px; border-radius:10px; box-shadow:0 6px 18px rgba(15,17,22,0.04); page-break-inside:avoid; break-inside:avoid; }
+    .word-title{ font-size:18px; font-weight:800; margin-bottom:6px; }
+    .tags{ margin-bottom:8px; }
+    .tag{ display:inline-block; background:#e9d5ff; color:#6b21a8; padding:6px 10px; border-radius:999px; margin-right:6px; font-weight:700; font-size:12px; }
+    .def-item{ background:#fff; border:1px solid #eef2ff; padding:10px; border-radius:8px; margin-bottom:8px; }
+    .def-num{ display:inline-block; width:30px; height:30px; line-height:30px; text-align:center; border-radius:999px; background:#0b1220; color:#fff; font-weight:800; margin-right:8px; }
+    .pos{ display:inline-block; padding:4px 8px; border-radius:6px; font-weight:700; margin-left:6px; font-size:12px; background:#f3e8ff; color:#6b21a8; }
+    .meta{ margin-top:6px; font-size:13px; color:#334155; }
+
+    /* NEW: pill styles for synonyms & antonyms in print */
+    .pill-syn { display:inline-block; background:#dcfce7; color:#166534; padding:6px 10px; border-radius:999px; margin-right:6px; margin-top:6px; font-weight:700; font-size:12px; }
+    .pill-ant { display:inline-block; background:#fee2e2; color:#991b1b; padding:6px 10px; border-radius:999px; margin-right:6px; margin-top:6px; font-weight:700; font-size:12px; }
+
+    @media print { .controls, .no-print { display:none !important; } body{ background:#fff; margin:8mm; } }
+  `;
+
+  // Build bodyHtml safely using concatenation (avoids nested unescaped <script> issues)
+  const bodyHtml = (docs && docs.length) ? docs.map(function(w){
+    const defs = Array.isArray(w.definitions) ? w.definitions : (w.meaning ? [{pos:"noun", meaning:w.meaning}] : []);
+    const tagsHtml = (w.tags || []).map(function(t){ return '<span class="tag>'+ escapeHtml(t) +'</span>'; }).join('');
+
+    const defsHtml = defs.map(function(d, i){
+      // per-definition synonyms/antonyms fallback to word-level synonyms/antonyms if empty
+      const synArr = (d.synonyms && d.synonyms.length) ? d.synonyms : (w.synonyms && w.synonyms.length ? w.synonyms : []);
+      const antArr = (d.antonyms && d.antonyms.length) ? d.antonyms : (w.antonyms && w.antonyms.length ? w.antonyms : []);
+
+      const synHtml = synArr.length ? synArr.map(function(s){ return '<span class="pill-syn>'+ escapeHtml(s) +'</span>'; }).join('') : '';
+      const antHtml = antArr.length ? antArr.map(function(a){ return '<span class="pill-ant>'+ escapeHtml(a) +'</span>'; }).join('') : '';
+
+      return '<div class="def-item">'
+           +   '<div style="display:flex;align-items:flex-start;gap:8px;">'
+           +     '<div class="def-num">' + (i+1) + '</div>'
+           +     '<div style="flex:1;">'
+           +       '<div style="display:flex;align-items:center;gap:8px;">'
+           +         '<div style="font-weight:800">' + escapeHtml(d.meaning) + '</div>'
+           +         '<div class="pos">' + escapeHtml(capitalizeLabel(d.pos || 'noun')) + '</div>'
+           +       '</div>'
+           +       '<div class="meta">'
+           +          (synHtml ? '<div style="margin-top:8px;"><strong>Synonyms:</strong> </div>' + synHtml : '')
+           +          (antHtml ? '<div style="margin-top:8px;"><strong>Antonyms:</strong> </div>' + antHtml : '')
+           +       '</div>'
+           +     '</div>'
+           +   '</div>'
+           + '</div>';
+    }).join('');
+
+    return '<article class="word-card">'
+         +   '<div class="word-title">' + escapeHtml(displayWord) + '</div>'
+         +   '<div class="tags">' + tagsHtml + '</div>'
+         +   '<div class="definitions">' + defsHtml + '</div>'
+         + '</article>';
+  }).join('') : '<div>No words to print.</div>';
+
+  // Return printable HTML WITHOUT any <script> tags (buttons use inline onclick)
+  return '<!doctype html><html><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/><title>Printable - My Word Vault</title><style>' + css + '</style></head><body><header><h1>My Word Vault — Printable Export</h1><div class="controls no-print"><button class="btn btn-print" onclick="window.print();">Print</button> <button class="btn btn-close" onclick="window.close();">Close</button></div></header><main>' + bodyHtml + '</main></body></html>';
+}
+
+  
+
+// ===== Thesarus overlay: search synonyms/antonyms across currentDocs =====
+btnThesarus && (btnThesarus.onclick = (ev) => { ev.preventDefault(); openThesaurus(); });
+
+function openThesaurus(){
+  const html = `
+    <div class="modal-overlay">
+      <div class="modal-card">
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;">
+          <div>
+            <div style="font-weight:900;font-size:1.4rem;color:#0f172a;">Thesarus</div>
+            <div style="margin-top:6px;color:#374151;font-size:0.95rem;">Search synonyms or antonyms in your vault (click results to open word)</div>
+          </div>
+          <button class="modal-close" id="thesaurusClose">✕</button>
+        </div>
+        <div style="margin-top:12px;display:flex;gap:8px;align-items:center;">
+          <input id="thesaurusQuery" class="field" placeholder="Enter a word (e.g., happy)" />
+          <button id="btnThesSyn" class="btn btn-primary">Search Syno</button>
+          <button id="btnThesAnt" class="btn btn-outline">Search Anto</button>
+        </div>
+        <div id="thesaurusResults" style="margin-top:12px;max-height:50vh;overflow:auto;"></div>
+      </div>
+    </div>
+  `;
+  thesaurusOverlay.innerHTML = html;
+  thesaurusOverlay.classList.remove('hidden');
+  document.body.style.overflow = 'hidden';
+
+  const inner = thesaurusOverlay.querySelector('.modal-card');
+  const closeBtn = thesaurusOverlay.querySelector('#thesaurusClose');
+  const qEl = thesaurusOverlay.querySelector('#thesaurusQuery');
+  const btnSyn = thesaurusOverlay.querySelector('#btnThesSyn');
+  const btnAnt = thesaurusOverlay.querySelector('#btnThesAnt');
+  const resultsEl = thesaurusOverlay.querySelector('#thesaurusResults');
+
+  function closeThesaurus(){ thesaurusOverlay.classList.add('hidden'); thesaurusOverlay.innerHTML = ''; document.body.style.overflow=''; }
+  closeBtn.onclick = closeThesaurus;
+  thesaurusOverlay.addEventListener('click', (ev)=> { if (ev.target === thesaurusOverlay) closeThesaurus(); });
+
+  btnSyn.onclick = () => { const q = (qEl.value||'').trim(); const list = collectThesaurusResults(q,'syn'); renderThesaurusResults(list,'syn'); };
+  btnAnt.onclick = () => { const q = (qEl.value||'').trim(); const list = collectThesaurusResults(q,'ant'); renderThesaurusResults(list,'ant'); };
+
+  // allow Enter to trigger synonyms search
+  qEl.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); btnSyn.click(); } });
+}
+
+function collectThesaurusResults(query, type){
+  const q = (query||'').trim().toLowerCase();
+  if (!q) return [];
+  const out = new Set();
+  for (const d of currentDocs){
+    // if exact word match -> gather its synonyms/antonyms and per-definition ones
+    if ((d.word||'').toLowerCase() === q){
+      if (type === 'syn'){
+        (d.synonyms||[]).forEach(s=> out.add(s));
+        (d.definitions||[]).forEach(dd => (dd.synonyms||[]).forEach(s => out.add(s)));
+      } else {
+        (d.antonyms||[]).forEach(a=> out.add(a));
+        (d.definitions||[]).forEach(dd => (dd.antonyms||[]).forEach(a => out.add(a)));
+      }
+    }
+
+    // if this doc lists q as a synonym/antonym -> the doc.word is related
+    if (type === 'syn'){
+      if ((d.synonyms||[]).map(s=>s.toLowerCase()).includes(q)) out.add(d.word);
+      if ((d.definitions||[]).some(dd => (dd.synonyms||[]).map(s=>s.toLowerCase()).includes(q))) out.add(d.word);
+    } else {
+      if ((d.antonyms||[]).map(s=>s.toLowerCase()).includes(q)) out.add(d.word);
+      if ((d.definitions||[]).some(dd => (dd.antonyms||[]).map(s=>s.toLowerCase()).includes(q))) out.add(d.word);
+    }
+  }
+  return Array.from(out).filter(Boolean).sort((a,b)=> a.localeCompare(b));
+}
+
+function renderThesaurusResults(list, type){
+  const resultsEl = thesaurusOverlay.querySelector('#thesaurusResults');
+  if (!resultsEl) return;
+  if (!list.length){ resultsEl.innerHTML = `<div class="text-white/80 italic">No results found.</div>`; return; }
+  resultsEl.innerHTML = list.map(w => `<div style="margin:6px 0;"><span class="pill ${type==='syn'?'pill-syn':'pill-ant'} token-pill" data-type="${type}">${escapeHtml(w)}</span></div>`).join('');
+  // make the result pills clickable (open modal if word exists)
+  wireTokenPills(resultsEl);
+}
+</script>
+
+<!-- ===== Global fixed modal nav (DOM-driven, non-invasive) ===== -->
+<style>
+:root{
+  --modal-nav-height: 56px;
+  --modal-nav-bottom: 16px;
+  --modal-nav-bg: rgba(255,255,255,0.96);
+  --modal-btn-bg: #2563eb;
+  --modal-btn-radius: 8px;
+}
+
+/* hidden by default, shown only while modal is open (body.modal-has-global-nav) */
+#modalGlobalNav { position: fixed; left: 0; right: 0; bottom: var(--modal-nav-bottom); z-index: 12000; display: none; pointer-events: auto; }
+
+/* visible panel centered */
+body.modal-has-global-nav #modalGlobalNav { display: flex; justify-content: center; }
+
+#modalGlobalNav .nav-panel{
+  display:inline-flex;
+  gap:8px;
+  padding:8px;
+  border-radius:999px;
+  align-items:center;
+  background: var(--modal-nav-bg);
+  box-shadow: 0 10px 30px rgba(2,6,23,0.18);
+  backdrop-filter: blur(4px);
+}
+
+/* buttons */
+#modalGlobalNav .btn {
+  border: none;
+  padding: 8px 12px;
+  border-radius: var(--modal-btn-radius);
+  font-weight: 700;
+  min-width:44px;
+  height:40px;
+  cursor:pointer;
+  background: var(--modal-btn-bg);
+  color: #fff;
+  box-shadow: 0 4px 10px rgba(2,6,23,0.12);
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  font-size:16px;
+}
+#modalGlobalNav .btn:disabled { background: #9ca3af; cursor: not-allowed; opacity: 0.95; }
+
+/* ensure modal content isn't hidden by nav */
+body.modal-has-global-nav .modal-card,
+body.modal-has-global-nav #__modalOverlayInner,
+body.modal-has-global-nav .modal-body,
+body.modal-has-global-nav .modal-inner {
+  padding-bottom: calc(var(--modal-nav-height) + 1rem) !important;
+  max-height: calc(100vh - (var(--modal-nav-height) + 48px)) !important;
+  overflow: auto;
+}
+
+/* small screen layout */
+@media (max-width:420px){
+  #modalGlobalNav .nav-panel { left: 12px; right: 12px; width: auto; justify-content: space-between; }
+}
+
+/* --- MOBILE / RESPONSIVE ADJUSTMENTS (added) --- */
+@media (max-width: 640px) {
+  /* use single column for cards on small screens */
+  #wordsContainer { grid-template-columns: 1fr !important; gap: 12px !important; }
+  /* smaller cards on phones */
+  .flip { height: 14rem !important; }
+  .flip-inner { min-height: 100%; }
+  /* reduce header size */
+  header h1 { font-size: 1.6rem !important; line-height:1.1 !important; }
+  header p { font-size: 0.92rem !important; }
+  /* allow content to use full width */
+  .max-w-5xl { max-width: 100% !important; padding-left: 12px !important; padding-right: 12px !important; }
+  .glass { padding: 12px !important; border-radius:10px !important; }
+  /* force form grid to be single column */
+  #wordForm { grid-template-columns: 1fr !important; }
+  #wordForm > div, #wordForm > .md\\:col-span-2 { width:100% !important; }
+  .field { padding:10px !important; font-size: 0.95rem !important; }
+  /* make definition rows stack vertically (JS creates inline min-widths) */
+  .glass > div > div { flex-direction: column !important; }
+  .glass .def-pos, .glass .def-labels, .glass .def-syn, .glass .def-ant, .glass .def-example, .glass .def-meaning {
+    max-width:100% !important; min-width: auto !important; width:100% !important;
+  }
+  /* modal adjustments for small screens */
+  .modal-overlay { padding: 12px !important; }
+  .modal-card { max-width: 100% !important; padding: 12px !important; border-radius: 10px !important; max-height: calc(100vh - 24px); overflow:auto; }
+  /* suggestions dropdown should fit */
+  .suggestions { min-width: auto !important; width: calc(100% - 20px) !important; left: 0 !important; right: auto !important; position: relative !important; margin-top:8px !important; }
+  /* smaller controls */
+  .btn { padding: .45rem .6rem !important; font-size: .92rem !important; }
+  .chip { padding: .2rem .45rem !important; font-size:.78rem !important; }
+  .word-title { font-size: 1.05rem !important; }
+  .summary { max-height: 4.5rem !important; font-size: .92rem !important; }
+  .card-dot { top:8px; right:8px; width:12px; height:12px; }
+  .flip-face { padding:12px !important; }
+}
+
+/* Extra-small screens */
+@media (max-width:420px) {
+  .flip { height: 12.5rem !important; }
+  header h1 { font-size: 1.25rem !important; }
+  .btn { padding: .42rem .5rem !important; font-size: .88rem !important; }
+  .word-meta { gap:6px !important; }
+  .def-text { font-size: .95rem !important; }
+  .star-indicator { font-size: .95rem !important; }
+}
+
+/* Ensure inputs/textarea don't overflow */
+input.field, textarea.field { box-sizing: border-box; max-width:100%; }
+
+/* Collapse side columns in 'large' layout on narrower viewports */
+@media (max-width: 900px) {
+  .flip-inner, .flip.flipped .flip-inner { flex-direction: column !important; }
+  .flip-face.card-back { flex-direction: column !important; }
+  .flip-face.card-back > div[style*="min-width:220px"] { min-width: auto !important; display:block; width:100% !important; }
+}
+/* --- end added responsive CSS --- */
+
+
+/* --- inserted mobile modal CSS start --- */
+
+/* ===== Mobile modal readability improvements (inserted) ===== */
+@media (max-width: 640px) {
+  /* Target many common modal patterns - scoped to mobile only */
+  .modal, .Modal, .dialog, .modal-window, .modal-overlay, .modal-container,
+  #modal, #definitionModal, .definition-modal, .def-modal, .modal-content,
+  .modal-body, .modal__content, .modalPanel, [role="dialog"], [data-modal] {
+    position: fixed !important;
+    top: 10px !important;
+    left: 10px !important;
+    right: 10px !important;
+    bottom: 10px !important;
+    width: auto !important;
+    max-width: calc(100% - 20px) !important;
+    margin: 0 auto !important;
+    border-radius: 12px !important;
+    box-sizing: border-box !important;
+    overflow: hidden !important;
+    background-clip: padding-box !important;
+    background-color: inherit !important;
+  }
+
+  /* Make modal content scrollable with comfortable padding and line-height */
+  .modal .modal-content, .modal-content, .Modal .Modal-content, .dialog .content,
+  .modal-body, .definition-modal .content, .def-modal .content, [role="dialog"] > * {
+    height: 100% !important;
+    max-height: calc(100vh - 40px) !important;
+    overflow-y: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+    padding: 16px !important;
+    line-height: 1.55 !important;
+    font-size: 1.05rem !important;
+  }
+
+  /* Ensure header/footer spacing */
+  .modal .modal-header, .modal-header, .modal .modal-footer, .modal-footer {
+    padding: 12px 16px !important;
+  }
+
+  /* Bigger, easy-to-tap close button */
+  .modal .close, .close-btn, .modal-close, .modal__close, .dialog .close {
+    position: absolute !important;
+    top: 8px !important;
+    right: 8px !important;
+    z-index: 9999 !important;
+    min-width: 40px !important;
+    min-height: 40px !important;
+    border-radius: 50% !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+  }
+
+  /* Touch targets inside modal */
+  .modal button, .modal a, .modal input, .modal textarea, [role="dialog"] button,
+  [role="dialog"] input, [role="dialog"] textarea {
+    min-height: 44px !important;
+    font-size: 1rem !important;
+  }
+
+  /* Ensure media scales */
+  .modal img, .modal video, [role="dialog"] img, [role="dialog"] video {
+    max-width: 100% !important;
+    height: auto !important;
+  }
+
+  /* Avoid accidental horizontal scrolls inside modal */
+  .modal * {
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+    word-break: break-word !important;
+  }
+}
+
+/* --- inserted mobile modal CSS end --- */
+
+
+
+/* --- inserted mobile fullscreen modal CSS start --- */
+
+/* ===== Mobile full-screen modal + stack side-by-side content (inserted) ===== */
+@media (max-width: 640px) {
+  /* Make modal/dialog use entire viewport on mobile */
+  .modal, .Modal, .dialog, .modal-window, .modal-overlay, .modal-container,
+  #modal, #definitionModal, #definition-modal, .definition-modal, .def-modal,
+  .modal-content-wrapper, [role="dialog"], [data-modal] {
+    position: fixed !important;
+    inset: 0 !important; /* top:0; right:0; bottom:0; left:0; */
+    width: 100% !important;
+    height: 100% !important;
+    margin: 0 !important;
+    border-radius: 0 !important;
+    padding: 0 !important;
+    max-width: 100% !important;
+    overflow: hidden !important;
+    background-clip: border-box !important;
+    background-color: inherit !important;
+  }
+
+  /* Modal inner content becomes scrollable and fills viewport */
+  .modal .modal-content, .modal-content, .Modal .Modal-content, .dialog .content,
+  .modal-body, .definition-modal .content, .def-modal .content, [role="dialog"] > * {
+    height: 100% !important;
+    max-height: 100vh !important;
+    overflow-y: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+    padding: 18px !important;
+    line-height: 1.55 !important;
+    font-size: 1.05rem !important;
+    box-sizing: border-box !important;
+    background: transparent !important;
+  }
+
+  /* Force any row/columns inside modal to stack vertically (avoid side-by-side) */
+  .modal .row, .modal .rows, .modal .columns, .modal .cols, .modal .columns-wrapper,
+  .modal .side-by-side, .definition-modal .row, .definition-modal .columns,
+  .def-modal .row, [role="dialog"] .row, [role="dialog"] .columns,
+  .modal .d-flex, .modal .flex-row, .modal .hstack, .modal .split {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 12px !important;
+  }
+
+  /* Ensure individual columns take full width */
+  .modal .col, .modal .column, .modal .col-1, .modal .col-2, .modal [class*="col-"],
+  .definition-modal .col, .definition-modal .column, .def-modal .col {
+    width: 100% !important;
+    max-width: 100% !important;
+    flex: 0 0 auto !important;
+  }
+
+  /* Make close button obvious and accessible */
+  .modal .close, .close-btn, .modal-close, .modal__close, .dialog .close,
+  button[aria-label="Close"], .modal .btn-close {
+    position: absolute !important;
+    top: 10px !important;
+    right: 10px !important;
+    z-index: 99999 !important;
+    min-width: 44px !important;
+    min-height: 44px !important;
+    border-radius: 999px !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+  }
+
+  /* Convert grids to block stacking */
+  .modal .grid, .modal .grid-row, .modal .grid-cols, .modal .grid-2, .modal .grid-3 {
+    display: block !important;
+  }
+
+  /* Media inside modal must scale */
+  .modal img, .modal video, [role="dialog"] img, [role="dialog"] video {
+    max-width: 100% !important;
+    height: auto !important;
+  }
+
+  /* Prevent accidental horizontal scrolls */
+  .modal *, [role="dialog"] * {
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+    word-break: break-word !important;
+  }
+}
+
+/* --- inserted mobile fullscreen modal CSS end --- */
+
+</style>
+
+<div id="modalGlobalNav" aria-hidden="true" style="display:none">
+  <div class="nav-panel" role="toolbar" aria-label="Modal navigation">
+    <button id="globalBack" class="btn" title="Back (Alt+←)" aria-label="Back">⟵</button>
+    <button id="globalForward" class="btn" title="Forward (Alt+→)" aria-label="Forward">⟶</button>
+    <span style="width:10px"></span>
+    <button id="globalPrev" class="btn" title="Previous" aria-label="Previous">◀</button>
+    <button id="globalNext" class="btn" title="Next" aria-label="Next">▶</button>
+    <button id="globalClose" class="btn" title="Close" aria-label="Close">✕</button>
+  </div>
+</div>
+
+<script>
+(function(){
+  // DOM-driven global nav that works with module-scoped modal code.
+  // It observes #modalOverlay for changes, reads the visible word in the modal card,
+  // maps it to a card in #wordsContainer to discover the data-id, and maintains
+  // a back/forward history of opened word ids. No reliance on module globals.
+  if (!document.getElementById('modalOverlay')) return;
+
+  const modalOverlayRoot = document.getElementById('modalOverlay');
+  let modalHistoryBack = [];
+  let modalHistoryForward = [];
+  let modalCurrentId = null;
+  let ignoreMutation = false; // set while we programmatically open modal to avoid double-push
+
+  function findCardIdForWord(wordText){
+    if (!wordText) return null;
+    const nodes = Array.from(document.querySelectorAll('#wordsContainer .word-title'));
+    const norm = (s)=> (s||'').trim().toLowerCase();
+    const found = nodes.find(n => norm(n.textContent) === norm(wordText));
+    if (found){
+      const card = found.closest('[data-id]');
+      if (card) return card.dataset.id;
+    }
+    // fallback: try to match token pills in cards (rare)
+    const pills = Array.from(document.querySelectorAll('#wordsContainer .token-pill'));
+    const pfound = pills.find(p => norm(p.textContent) === norm(wordText));
+    if (pfound){
+      const card = pfound.closest('[data-id]');
+      if (card) return card.dataset.id;
+    }
+    return null;
+  }
+
+  function openModalById(id){
+    if (!id) return false;
+    // Try clicking a .card-dot first (wired to open modal in original code)
+    const dot = document.querySelector(`#wordsContainer .card-dot[data-dot-id="${id}"]`);
+    if (dot){ dot.click(); return true; }
+    // fallback: click the card element with data-id (some layouts might open modal on card click)
+    const card = document.querySelector(`#wordsContainer [data-id="${id}"]`);
+    if (card){ card.click(); return true; }
+    return false;
+  }
+
+  function updateGlobalNavButtons(){
+    const back = document.getElementById('globalBack');
+    const forward = document.getElementById('globalForward');
+    const prev = document.getElementById('globalPrev');
+    const next = document.getElementById('globalNext');
+    if (back) back.disabled = modalHistoryBack.length === 0;
+    if (forward) forward.disabled = modalHistoryForward.length === 0;
+    // prev/next depend on presence of modal controls; enable if present (we'll let click handle fallback)
+    const posPrev = !!document.querySelector('#__modalOverlayInner #modalPrev');
+    const posNext = !!document.querySelector('#__modalOverlayInner #modalNext');
+    if (prev) prev.disabled = !posPrev;
+    if (next) next.disabled = !posNext;
+    // show/hide global nav based on whether modal is open
+    const nav = document.getElementById('modalGlobalNav');
+    if (document.body.classList.contains('modal-has-global-nav')){
+      if (nav) nav.style.display = '';
+      document.getElementById('modalGlobalNav')?.setAttribute('aria-hidden','false');
+    } else {
+      if (nav) nav.style.display = 'none';
+      document.getElementById('modalGlobalNav')?.setAttribute('aria-hidden','true');
+    }
+  }
+
+  // Observe #modalOverlay for added/removed children (i.e., modal open/close)
+  const mo = new MutationObserver((mutations)=>{
+    if (ignoreMutation) return;
+    // check if modal overlay has an inner modal element
+    const inner = document.getElementById('__modalOverlayInner') || modalOverlayRoot.querySelector('.modal-overlay');
+    if (inner && inner.querySelector('.modal-card')){
+      // modal opened
+      document.body.classList.add('modal-has-global-nav');
+      // try to read title element (the modal title uses inline style font-size:1.6rem in this file)
+      let titleEl = inner.querySelector('[style*="font-size:1.6rem"]');
+      let titleText = titleEl ? (titleEl.textContent||'').trim() : null;
+      // fallback: try to find first strong-looking text
+      if (!titleText){
+        const possible = inner.querySelector('.modal-card div div');
+        titleText = possible ? (possible.textContent||'').trim() : null;
+      }
+      const id = findCardIdForWord(titleText);
+      if (id){
+        if (modalCurrentId && modalCurrentId !== id){
+          modalHistoryBack.push(modalCurrentId);
+          modalHistoryForward.length = 0;
+        }
+        modalCurrentId = id;
+      } else {
+        // If id not found, still set modalCurrentId to null so history behaves conservatively
+        if (modalCurrentId && !modalHistoryBack.length) {
+          // nothing
+        }
+      }
+      updateGlobalNavButtons();
+    } else {
+      // modal closed
+      document.body.classList.remove('modal-has-global-nav');
+      updateGlobalNavButtons();
+    }
+  });
+
+  mo.observe(modalOverlayRoot, { childList: true, subtree: true });
+
+  // wire global nav buttons to DOM actions (no module globals required)
+  document.addEventListener('click', (e)=>{
+    const t = e.target;
+    if (!t) return;
+    if (t.id === 'globalBack'){
+      e.preventDefault();
+      if (!modalHistoryBack.length) return;
+      const prevId = modalHistoryBack.pop();
+      if (modalCurrentId) modalHistoryForward.push(modalCurrentId);
+      modalCurrentId = prevId;
+      ignoreMutation = true;
+      const ok = openModalById(prevId);
+      setTimeout(()=>{ ignoreMutation = false; updateGlobalNavButtons(); }, 160);
+      return;
+    }
+    if (t.id === 'globalForward'){
+      e.preventDefault();
+      if (!modalHistoryForward.length) return;
+      const nextId = modalHistoryForward.pop();
+      if (modalCurrentId) modalHistoryBack.push(modalCurrentId);
+      modalCurrentId = nextId;
+      ignoreMutation = true;
+      const ok = openModalById(nextId);
+      setTimeout(()=>{ ignoreMutation = false; updateGlobalNavButtons(); }, 160);
+      return;
+    }
+    if (t.id === 'globalPrev'){
+      e.preventDefault();
+      // try to click the modal's prev button if present (it is wired to openModalForWord inside module)
+      const innerPrev = document.querySelector('#__modalOverlayInner #modalPrev') || document.querySelector('#modalOverlay #modalPrev');
+      if (innerPrev){ innerPrev.click(); updateGlobalNavButtons(); return; }
+      // fallback: try to compute prev by locating current card and picking previous sibling card
+      if (modalCurrentId){
+        const card = document.querySelector(`#wordsContainer [data-id="${modalCurrentId}"]`);
+        if (card && card.previousElementSibling){
+          const prevCard = card.previousElementSibling;
+          const id = prevCard.dataset.id;
+          if (id){ openModalById(id); }
+        }
+      }
+      return;
+    }
+    if (t.id === 'globalNext'){
+      e.preventDefault();
+      const innerNext = document.querySelector('#__modalOverlayInner #modalNext') || document.querySelector('#modalOverlay #modalNext');
+      if (innerNext){ innerNext.click(); updateGlobalNavButtons(); return; }
+      if (modalCurrentId){
+        const card = document.querySelector(`#wordsContainer [data-id="${modalCurrentId}"]`);
+        if (card && card.nextElementSibling){
+          const nextCard = card.nextElementSibling;
+          const id = nextCard.dataset.id;
+          if (id){ openModalById(id); }
+        }
+      }
+      return;
+    }
+    if (t.id === 'globalClose'){
+      e.preventDefault();
+      const innerClose = document.querySelector('#__modalOverlayInner #modalCloseBtn') || document.querySelector('#modalOverlay .modal-close') || document.querySelector('#modalOverlay .modal-close');
+      if (innerClose){ innerClose.click(); document.body.classList.remove('modal-has-global-nav'); updateGlobalNavButtons(); return; }
+      // else try to clear overlay
+      const overlay = document.getElementById('modalOverlay');
+      if (overlay){ overlay.innerHTML = ''; overlay.classList.add('hidden'); document.body.style.overflow = ''; document.body.classList.remove('modal-has-global-nav'); updateGlobalNavButtons(); }
+      return;
+    }
+  });
+
+  // keyboard: Alt+Left / Alt+Right => back/forward
+  document.addEventListener('keydown', (e)=>{
+    if (!document.body.classList.contains('modal-has-global-nav')) return;
+    if (e.altKey && e.key === 'ArrowLeft'){ e.preventDefault(); document.getElementById('globalBack')?.click(); }
+    if (e.altKey && e.key === 'ArrowRight'){ e.preventDefault(); document.getElementById('globalForward')?.click(); }
+  });
+
+  // Expose for debugging (optional)
+  window.__mwv_modal_history = { getBack: ()=>modalHistoryBack.slice(), getForward: ()=>modalHistoryForward.slice(), getCurrent: ()=>modalCurrentId };
+  // Ensure nav exists (if the HTML was injected) and update state initially
+  setTimeout(()=>{ updateGlobalNavButtons(); }, 200);
+})();
+</script>
+<!-- ===== end Global fixed modal nav ===== -->
+
+</body>
+</html>
