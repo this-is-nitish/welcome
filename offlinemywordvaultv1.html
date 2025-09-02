@@ -1,0 +1,326 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>📚 My Word Vault — Offline (Read-only)</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    :root { --bg1:#3b82f6; --bg2:#9333ea; }
+    body{ min-height:100vh; margin:0; background: linear-gradient(135deg, var(--bg1), var(--bg2)); color:#fff; font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial; }
+    .glass{ background:rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.10); backdrop-filter: blur(6px); border-radius:12px; }
+    .field{ width:100%; padding:10px 12px; border-radius:8px; background:#fff; color:#0f172a; border:none; }
+    .btn{ padding:.5rem .75rem; border-radius:10px; font-weight:700; cursor:pointer; }
+    .btn-outline{ background:transparent; border:1px solid rgba(255,255,255,.12); color:#fff; }
+    .btn-primary{ background:linear-gradient(135deg,#6366f1,#4338ca); color:#fff; }
+    .chip{ display:inline-block; padding:.28rem .55rem; border-radius:999px; background:rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.08); }
+    .word-title{ font-weight:900; font-size:1.2rem; }
+    #wordsContainer{ display:grid; grid-template-columns: repeat(2,1fr); gap:16px; }
+
+    .flip{ perspective:800px; height:16rem; position:relative; }
+    .flip-inner{ position:relative; width:100%; height:100%; transform-style:preserve-3d; transition: transform .5s; }
+    .flip.flipped .flip-inner{ transform: rotateY(180deg); }
+    .flip-face{ position:absolute; inset:0; backface-visibility:hidden; border-radius:12px; padding:12px; }
+    .card-front{ background: linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.02)); }
+    .card-back{ background: rgba(0,0,0,.38); transform: rotateY(180deg); overflow:auto; }
+
+    .def-item{ display:flex; gap:10px; align-items:flex-start; background:#fff; color:#0f172a; border-radius:10px; padding:10px; margin-bottom:8px; }
+    .def-num{ min-width:36px; height:36px; border-radius:999px; background:#0f172a; color:#fff; display:inline-flex; align-items:center; justify-content:center; font-weight:800; }
+    .def-text{ flex:1; color:#0b1220; }
+
+    .pill{ display:inline-block; padding:.18rem .45rem; border-radius:999px; margin:.12rem; font-weight:700; background:rgba(255,255,255,.06); color:#fff; }
+    .token-pill{ display:inline-block; margin:0 .12rem; padding:0 .18rem; border-radius:4px; font-weight:700; }
+    .token-pill.clickable{ cursor:pointer; text-decoration:underline dotted; }
+    .token-pill.disabled{ opacity:0.6; cursor:not-allowed; }
+
+    .modal-overlay{ position:fixed; inset:0; display:flex; align-items:center; justify-content:center; z-index:80; background: rgba(2,6,23,0.55); padding:20px; }
+    .modal-card{ width:100%; max-width:880px; border-radius:12px; padding:14px; background:#fff; color:#0f172a; }
+    .modal-close{ position:absolute; right:12px; top:12px; background:#111827; color:#fff; border-radius:999px; width:36px; height:36px; display:inline-flex; align-items:center; justify-content:center; cursor:pointer; }
+
+    .hidden{ display:none !important; }
+    .toast{ position: fixed; right: 16px; bottom: 16px; z-index: 90; padding:.6rem .9rem; border-radius:.6rem; color:#07101a; background:#e9fff1; border:1px solid #79f2a0; box-shadow: 0 8px 30px rgba(0,0,0,.15); transform: translateY(40px); opacity:0; transition: .3s; }
+    .toast.show{ transform: translateY(0); opacity:1; }
+
+    @media(min-width:1024px){ #wordsContainer{ grid-template-columns: repeat(3,1fr); } }
+  </style>
+</head>
+<body>
+  <header class="px-6 pt-8 pb-4 text-center">
+    <h1 class="text-3xl font-extrabold">📚 My Word Vault — Offline (Read-only)</h1>
+    <p class="mt-2 text-white/80">Loaded from <code>words.json</code> — editing disabled</p>
+  </header>
+
+  <main class="max-w-5xl mx-auto px-4 pb-12">
+    <div class="glass p-4 mb-4 flex flex-col md:flex-row gap-3 items-end">
+      <div class="flex-1">
+        <input id="search" class="field" placeholder="🔍 Search in word, definitions, synonyms, antonyms, tags…" />
+      </div>
+      <div class="flex items-center gap-2">
+        <div class="chip"><span id="wordCount">0</span> words</div>
+        <button id="btnRefresh" class="btn btn-outline">Refresh</button>
+        <button id="btnPrintable" class="btn btn-primary">Printable View</button>
+      </div>
+    </div>
+
+    <div class="flex items-center gap-3 mb-4">
+      <div id="activeFilterContainer"></div>
+      <div id="starFilterControls" class="ml-3 flex items-center gap-2">
+        <button id="starFilterAll" class="btn btn-outline">All</button>
+        <button id="starFilter1" class="btn btn-outline" title="1 star">★</button>
+        <button id="starFilter2" class="btn btn-outline" title="2 stars">★★</button>
+        <button id="starFilter3" class="btn btn-outline" title="3 stars">★★★</button>
+      </div>
+    </div>
+
+    <div id="wordsContainer"></div>
+  </main>
+
+  <div id="modalOverlay" class="hidden" aria-hidden="true"></div>
+  <div id="toast" class="toast hidden">Loaded</div>
+
+  <script>
+    // Read-only offline version — loads words from words.json
+    let currentDocs = [];
+    let tagSet = new Set();
+    let activeTagFilter = null;
+    let activePosFilter = null;
+    let activeStarFilter = null;
+
+    const wordsContainer = document.getElementById('wordsContainer');
+    const searchEl = document.getElementById('search');
+    const wordCountEl = document.getElementById('wordCount');
+    const toast = document.getElementById('toast');
+    const modalOverlay = document.getElementById('modalOverlay');
+    const activeFilterContainer = document.getElementById('activeFilterContainer');
+
+    function showToast(m, t=1200){ toast.textContent = m; toast.classList.remove('hidden'); toast.classList.add('show'); setTimeout(()=>{ toast.classList.remove('show'); toast.classList.add('hidden'); }, t); }
+
+    function loadWordsFromJson(){
+      fetch('words.json').then(r=>{
+        if (!r.ok) throw new Error('Failed to fetch words.json — are you running a local server?');
+        return r.json();
+      }).then(data=>{
+        let arr = [];
+        if (Array.isArray(data)) arr = data.slice();
+        else if (data && typeof data === 'object') arr = Object.keys(data).map((k,i)=> (data[k] && data[k].id) ? data[k] : ({ id: k, ...data[k] }));
+        // Ensure every doc has an id
+        arr = arr.map((d,i)=> ({ id: d.id || ('w'+i), ...d }));
+        // Defensive: ensure definitions arrays
+        arr = arr.map(d=> ({ definitions: Array.isArray(d.definitions) ? d.definitions : (d.meaning ? [{pos:'noun', meaning: d.meaning}] : []), synonyms: d.synonyms||[], antonyms: d.antonyms||[], tags: d.tags||[], otherForms: d.otherForms||[], stars: Number(d.stars||0), word: d.word||'', id: d.id }));
+        currentDocs = arr;
+        updateTagSetFromDocs();
+        renderCards();
+        showToast('Loaded ' + currentDocs.length + ' words');
+      }).catch(err=>{
+        console.error(err);
+        wordsContainer.innerHTML = '<div style="color:#fff">Error: could not load <code>words.json</code>. If you opened this file via <code>file://</code>, please run a local server (e.g. <code>python -m http.server</code>) and place <code>words.json</code> next to this HTML.</div>';
+        showToast('Load failed', 2200);
+      });
+    }
+
+    function updateTagSetFromDocs(){ tagSet = new Set(); for (const d of currentDocs) if (Array.isArray(d.tags)) for (const t of d.tags) tagSet.add(t); }
+
+    // helpers
+    function escapeHtml(s){ if (!s && s!==0) return ''; return String(s).replace(/[&<>"']/g, function(m){ return ({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;',"'":'&#39;'})[m]; }); }
+    function capitalizeLabel(s){ if(!s) return s; return s.split(/[\s\-]/).map(p=>p.charAt(0).toUpperCase()+p.slice(1)).join(' '); }
+
+    function buildDefsHtmlForDisplay(w){
+      const defs = Array.isArray(w.definitions) ? w.definitions : [];
+      if (!defs.length) return '';
+
+      const targets = Array.from(new Set((currentDocs || []).map(d => d.word).filter(Boolean))).filter(t => t.toLowerCase() !== (w.word || '').toLowerCase());
+      targets.sort((a,b)=> b.length - a.length);
+      function escapeRegExp(s){ return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }
+
+      function linkifyText(text){
+        if (!targets.length || !text) return escapeHtml(text || '');
+        const pattern = targets.map(escapeRegExp).join('|');
+        const regex = new RegExp('\\b(' + pattern + ')\\b','gi');
+        let lastIndex = 0; let res = ''; let m;
+        while ((m = regex.exec(text)) !== null){
+          const matchText = m[0];
+          const idx = m.index;
+          res += escapeHtml(text.slice(lastIndex, idx));
+          const found = currentDocs.find(d2 => (d2.word||'').toLowerCase() === matchText.toLowerCase());
+          if (found){ res += `<span class="token-pill xref" data-type="xref">${escapeHtml(found.word)}</span>`; }
+          else { res += escapeHtml(matchText); }
+          lastIndex = regex.lastIndex;
+        }
+        res += escapeHtml(text.slice(lastIndex));
+        return res;
+      }
+
+      return defs.map((d,i)=>{
+        const synArr = (d.synonyms && d.synonyms.length) ? d.synonyms : [];
+        const antArr = (d.antonyms && d.antonyms.length) ? d.antonyms : [];
+        const synBlock = synArr.length ? `<div style="margin-top:8px;"><div style="font-weight:700;margin-bottom:6px;color:#0f172a;">Synonyms</div><div>${synArr.map(s=>`<span class="pill token-pill" data-type="syn">${escapeHtml(s)}</span>`).join('')}</div></div>` : '';
+        const antBlock = antArr.length ? `<div style="margin-top:8px;"><div style="font-weight:700;margin-top:10px;margin-bottom:6px;color:#0f172a;">Antonyms</div><div>${antArr.map(a=>`<span class="pill token-pill" data-type="ant">${escapeHtml(a)}</span>`).join('')}</div></div>` : '';
+        const exampleBlock = (d.example) ? `<div style="margin-top:8px;"><div style="font-weight:700;margin-bottom:6px;color:#0f172a;">Example</div><div>${escapeHtml(d.example)}</div></div>` : '';
+        const meaningHtml = linkifyText(d.meaning || '');
+        return `
+          <div class="def-item">
+            <div class="def-num">${i+1}</div>
+            <div style="flex:1;">
+              <div style="margin-bottom:6px;"><span class="pos-badge pos-${(d.pos||'noun').toLowerCase()}" data-pos="${escapeHtml(d.pos||'noun')}">${escapeHtml(capitalizeLabel(d.pos||'noun'))}</span></div>
+              <div class="def-text">${meaningHtml}</div>
+              ${synBlock}
+              ${antBlock}
+              ${exampleBlock}
+            </div>
+          </div>`;
+      }).join('');
+    }
+
+    function getFilteredDocs(){
+      const qText = (searchEl.value || '').toLowerCase().trim();
+      return currentDocs.filter(w=>{
+        if (activeTagFilter){ const tags = (w.tags||[]).map(t=> (t||'').toLowerCase()); if (!tags.includes(activeTagFilter.toLowerCase())) return false; }
+        if (activePosFilter){ const defs = Array.isArray(w.definitions) ? w.definitions : []; const hasPos = defs.some(d=> (d.pos||'').toLowerCase() === activePosFilter.toLowerCase()); if (!hasPos) return false; }
+        if (activeStarFilter !== null){ if (Number(w.stars || 0) !== Number(activeStarFilter)) return false; }
+        if (!qText) return true;
+        const parts = [w.word, ...(w.tags||[]), ...(w.synonyms||[]), ...(w.antonyms||[]), ...(w.otherForms||[])];
+        if (Array.isArray(w.definitions)) for (const d of w.definitions) parts.push(d.meaning, d.pos, ...(d.synonyms||[]), ...(d.antonyms||[]));
+        return parts.join(' ').toLowerCase().includes(qText);
+      });
+    }
+
+    function openModalForWord(id){
+      const w = currentDocs.find(x=> x.id === id || x.word === id);
+      if (!w) return;
+      modalOverlay.innerHTML = '';
+      const outer = document.createElement('div'); outer.className = 'modal-overlay';
+      const defsHtml = buildDefsHtmlForDisplay(w) || '<div class="def-item"><div class="def-text">No definitions.</div></div>';
+
+      // compute visible docs & index
+      const modalVisibleDocs = getFilteredDocs();
+      let modalCurrentIndex = modalVisibleDocs.findIndex(x=> x.id === w.id);
+      if (modalCurrentIndex === -1){ modalCurrentIndex = modalVisibleDocs.findIndex(x=> x.word === w.word); }
+
+      outer.innerHTML = `
+        <div class="modal-card">
+          <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;position:relative;">
+            <div>
+              <div style="font-weight:900;font-size:1.4rem;color:#0f172a;">${escapeHtml(w.word)}</div>
+              <div style="margin-top:6px;">${(w.tags||[]).map(t=>`<span class="pill" data-type="tag">${escapeHtml(t)}</span>`).join(' ')}</div>
+            </div>
+            <div style="display:flex;gap:10px;align-items:center;">
+              <button id="modalPrev" class="btn btn-outline">◀</button>
+              <div style="font-weight:700;min-width:60px;text-align:center;color:#374151;">${(modalCurrentIndex+1)} / ${modalVisibleDocs.length}</div>
+              <div class="star-indicator" style="padding:6px 8px;border-radius:8px;background:rgba(0,0,0,.04);">${'★'.repeat(Number(w.stars||0)) || '—'}</div>
+              <button id="modalNext" class="btn btn-outline">▶</button>
+              <button class="modal-close" id="modalCloseBtn">✕</button>
+            </div>
+          </div>
+          <div style="margin-top:12px;max-height:56vh;overflow:auto;padding-right:6px;">${defsHtml}</div>
+          <div style="margin-top:8px;display:flex;justify-content:flex-end;gap:8px;">
+            <button id="modalDone" class="btn btn-primary">Done</button>
+          </div>
+        </div>`;
+
+      modalOverlay.appendChild(outer);
+      modalOverlay.classList.remove('hidden'); document.body.style.overflow = 'hidden';
+
+      // wire close
+      outer.querySelector('#modalCloseBtn').onclick = closeModal;
+      outer.querySelector('#modalDone').onclick = closeModal;
+
+      // navigation
+      const prevBtn = outer.querySelector('#modalPrev');
+      const nextBtn = outer.querySelector('#modalNext');
+      prevBtn.onclick = (ev)=>{ ev.stopPropagation(); if(!modalVisibleDocs.length) return; const newIdx = (modalCurrentIndex -1 + modalVisibleDocs.length) % modalVisibleDocs.length; const newId = modalVisibleDocs[newIdx].id; closeModal(); openModalForWord(newId); };
+      nextBtn.onclick = (ev)=>{ ev.stopPropagation(); if(!modalVisibleDocs.length) return; const newIdx = (modalCurrentIndex +1) % modalVisibleDocs.length; const newId = modalVisibleDocs[newIdx].id; closeModal(); openModalForWord(newId); };
+
+      // wire token pills & pos badges inside modal
+      wireTokenPills(outer);
+      wirePosBadges(outer);
+    }
+
+    function closeModal(){ modalOverlay.classList.add('hidden'); modalOverlay.innerHTML = ''; document.body.style.overflow = ''; }
+
+    function renderCards(){
+      const filtered = getFilteredDocs();
+      wordCountEl.textContent = currentDocs.length;
+      if (!filtered.length){ wordsContainer.innerHTML = '<div style="color:#fff; font-style:italic;">No words found. Adjust search or load a different words.json</div>'; return; }
+      wordsContainer.innerHTML = '';
+      filtered.forEach((w, idx)=>{
+        const defs = Array.isArray(w.definitions) ? w.definitions : [];
+        const firstDef = defs[0]?.meaning || '';
+        const card = document.createElement('div'); card.className = 'flip group cursor-pointer relative'; card.dataset.id = w.id;
+        card.innerHTML = `
+          <div class="flip-inner">
+            <div class="flip-face card-front">
+              <div style="display:flex;justify-content:space-between;align-items:start;">
+                <div>
+                  <div class="word-title">${escapeHtml(w.word)}</div>
+                  <div style="opacity:.95;margin-top:6px;">${escapeHtml(firstDef)}</div>
+                </div>
+                <div style="text-align:right;min-width:72px;">${(w.tags||[]).map(t=>`<span class="pill" data-type="tag">${escapeHtml(t)}</span>`).join(' ')}<div style="margin-top:8px;color:#fff;">${'★'.repeat(Number(w.stars||0)) || '—'}</div></div>
+              </div>
+            </div>
+            <div class="flip-face card-back">
+              <div style="overflow:auto; max-height:10.5rem; padding-right:6px; padding-left:6px;">${buildDefsHtmlForDisplay(w) || '<div class="def-item"><div class="def-text">No definitions</div></div>'}</div>
+              <div style="display:flex;gap:8px;padding-top:8px;justify-content:flex-end;">
+                <button class="btn btn-outline" data-action="open" data-id="${w.id}">Open</button>
+              </div>
+            </div>
+          </div>`;
+        wordsContainer.appendChild(card);
+        setTimeout(()=>{ card.classList.add('visible'); card.style.animation = `cardIn .36s ease ${idx*30}ms both`; }, 20);
+      });
+
+      // wire open buttons and dots
+      [...wordsContainer.querySelectorAll('button[data-action="open"]')].forEach(btn=> btn.onclick = (e)=>{ e.stopPropagation(); openModalForWord(btn.dataset.id); });
+
+      // flips on click
+      [...wordsContainer.querySelectorAll('.flip')].forEach(card=>{
+        card.addEventListener('click', (ev)=>{ const btn = ev.target.closest('button[data-action]'); if (btn) return; card.classList.toggle('flipped'); });
+      });
+
+      // wire token pills & pos badges
+      wireTokenPills(wordsContainer);
+      wirePosBadges(wordsContainer);
+    }
+
+    function wireTokenPills(root){ if (!root) root = document; const pills = root.querySelectorAll('.token-pill'); pills.forEach(pill=>{ const tokenText = (pill.textContent||'').trim(); if (!tokenText) return; pill.onclick = null; pill.onkeydown = null; pill.classList.remove('clickable','disabled'); const type = pill.getAttribute('data-type') || '';
+        if (type === 'tag'){ pill.classList.add('clickable'); pill.setAttribute('tabindex','0'); pill.onclick = (ev)=>{ ev.stopPropagation(); setActiveTagFilter(tokenText); closeModal(); }; pill.onkeydown = (ev)=>{ if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); setActiveTagFilter(tokenText); closeModal(); } }; return; }
+        if (type === 'form'){ const base = tokenText.replace(/\s*\(.*\)\s*$/,'').trim(); const found = currentDocs.find(d=> (d.word||'').toLowerCase() === base.toLowerCase()); pill.addEventListener('click', (ev)=> ev.stopPropagation(), { once: false }); if (found){ pill.classList.add('clickable'); pill.setAttribute('tabindex','0'); pill.onclick = (ev)=>{ ev.stopPropagation(); openModalForWord(found.id); }; pill.onkeydown = (ev)=>{ if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); ev.stopPropagation(); openModalForWord(found.id); } }; } else { pill.classList.add('disabled'); pill.setAttribute('aria-disabled','true'); pill.setAttribute('tabindex','-1'); } return; }
+        // generic token handling
+        const found = currentDocs.find(d=> (d.word||'').toLowerCase() === tokenText.toLowerCase()); pill.addEventListener('click', (ev)=> ev.stopPropagation(), { once: false }); if (found){ pill.classList.add('clickable'); pill.setAttribute('tabindex','0'); pill.onclick = (ev)=>{ ev.stopPropagation(); openModalForWord(found.id); }; pill.onkeydown = (ev)=>{ if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); ev.stopPropagation(); openModalForWord(found.id); } }; } else { pill.classList.add('disabled'); pill.setAttribute('aria-disabled','true'); pill.setAttribute('tabindex','-1'); } }); }
+
+    function wirePosBadges(root){ if (!root) root = document; const badges = root.querySelectorAll('.pos-badge'); badges.forEach(b=>{ const posAttr = (b.getAttribute('data-pos') || b.textContent || '').trim(); if (!posAttr) return; const posVal = posAttr.toLowerCase(); b.onclick = null; b.onkeydown = null; b.classList.remove('clickable'); b.addEventListener('click', ev=> ev.stopPropagation(), { once:false }); b.classList.add('clickable'); b.setAttribute('tabindex','0'); b.onclick = (ev)=>{ ev.stopPropagation(); setActivePosFilter(posVal); closeModal(); }; b.onkeydown = (ev)=>{ if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); ev.stopPropagation(); setActivePosFilter(posVal); closeModal(); } }; }); }
+
+    function setActiveTagFilter(tag){ activeTagFilter = tag; renderActiveFilterUI(); renderCards(); showToast('Filtering tag: '+tag); }
+    function clearActiveTagFilter(){ activeTagFilter = null; renderActiveFilterUI(); renderCards(); showToast('Tag filter cleared'); }
+    function setActivePosFilter(pos){ activePosFilter = pos; renderActiveFilterUI(); renderCards(); showToast('Filtering POS: '+capitalizeLabel(pos)); }
+    function clearActivePosFilter(){ activePosFilter = null; renderActiveFilterUI(); renderCards(); showToast('POS filter cleared'); }
+    function setActiveStarFilter(n){ activeStarFilter = (n===null? null: Number(n)); renderActiveFilterUI(); renderCards(); showToast(activeStarFilter? 'Filtering stars: '+'★'.repeat(activeStarFilter): 'Showing all stars'); }
+
+    function renderActiveFilterUI(){ const parts = []; if (activeTagFilter) parts.push(`<span class="chip">Tag: ${escapeHtml(activeTagFilter)} <button id="clearTagFilterBtn" style="margin-left:6px">×</button></span>`); if (activePosFilter) parts.push(`<span class="chip">POS: ${escapeHtml(capitalizeLabel(activePosFilter))} <button id="clearPosFilterBtn" style="margin-left:6px">×</button></span>`); if (activeStarFilter) parts.push(`<span class="chip">Stars: ${'★'.repeat(activeStarFilter)} <button id="clearStarFilterBtn" style="margin-left:6px">×</button></span>`); activeFilterContainer.innerHTML = parts.join(' '); const clearTagBtn = document.getElementById('clearTagFilterBtn'); if (clearTagBtn) clearTagBtn.onclick = clearActiveTagFilter; const clearPosBtn = document.getElementById('clearPosFilterBtn'); if (clearPosBtn) clearPosBtn.onclick = clearActivePosFilter; const clearStarBtn = document.getElementById('clearStarFilterBtn'); if (clearStarBtn) clearStarBtn.onclick = ()=> setActiveStarFilter(null); }
+
+    // star filter buttons
+    document.getElementById('starFilterAll').onclick = ()=> setActiveStarFilter(null);
+    document.getElementById('starFilter1').onclick = ()=> setActiveStarFilter(1);
+    document.getElementById('starFilter2').onclick = ()=> setActiveStarFilter(2);
+    document.getElementById('starFilter3').onclick = ()=> setActiveStarFilter(3);
+
+    searchEl.addEventListener('input', ()=> renderCards());
+    document.getElementById('btnRefresh').onclick = ()=> { loadWordsFromJson(); showToast('Refreshed'); };
+
+    // Printable
+    document.getElementById('btnPrintable').onclick = (ev)=>{ ev.preventDefault(); openPrintableWindow(); };
+    function buildPrintableHtml(docs){
+      const css = `body{font-family:Arial,Helvetica,sans-serif;color:#0b1220;margin:18px;} h1{font-size:20px;} .word{margin-bottom:14px;} .meta{font-size:12px;color:#374151;} .def{margin-top:6px;padding-left:18px;} `;
+      const bodyHtml = docs.map(w=>{
+        const defsHtml = (w.definitions||[]).map((d,i)=>`<div class="def"><strong>${i+1}. ${escapeHtml(d.pos||'')}</strong> ${escapeHtml(d.meaning||'')}</div>`).join('');
+        return `<div class="word"><h2>${escapeHtml(w.word)}</h2><div class="meta">${(w.tags||[]).join(', ')}</div>${defsHtml}</div>`;
+      }).join('\n');
+      return `<!doctype html><html><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/><title>Printable</title><style>${css}</style></head><body><h1>My Word Vault — Printable</h1>${bodyHtml}</body></html>`;
+    }
+    function openPrintableWindow(){ const w = window.open('','_blank'); if (!w) return showToast('Popup blocked'); const html = buildPrintableHtml(currentDocs); w.document.write(html); w.document.close(); }
+
+    // initial load
+    loadWordsFromJson();
+
+  </script>
+</body>
+</html>
